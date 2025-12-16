@@ -50,6 +50,13 @@ export const paginatedJobsSchema = z.object({
     hasNextPage: z.boolean(),
 })
 
+export const jobStatisticsSchema = z.object({
+    totalJobs: z.number().int().nonnegative(),
+    activeJobs: z.number().int().nonnegative(),
+    completedJobs: z.number().int().nonnegative(),
+    failedJobs: z.number().int().nonnegative(),
+})
+
 export const jobsQueryParamsSchema = z.object({
     pageNumber: z.number().int().positive().optional(),
     pageSize: z.number().int().positive().min(1).max(50).optional(),
@@ -62,6 +69,7 @@ export const jobsQueryParamsSchema = z.object({
 
 export type Job = z.infer<typeof jobSchema>
 export type PaginatedJobs = z.infer<typeof paginatedJobsSchema>
+export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 
 // Manual type for query params (avoiding Zod default inference issues)
 export interface JobsQueryParams {

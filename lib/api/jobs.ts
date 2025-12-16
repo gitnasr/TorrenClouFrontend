@@ -3,15 +3,17 @@ import apiClient from '../axios'
 import {
     jobSchema,
     paginatedJobsSchema,
+    jobStatisticsSchema,
 } from '@/types/jobs'
 import type {
     Job,
     PaginatedJobs,
     JobsQueryParams,
+    JobStatistics,
 } from '@/types/jobs'
 
 // Re-export types for convenience
-export type { Job, PaginatedJobs, JobsQueryParams }
+export type { Job, PaginatedJobs, JobsQueryParams, JobStatistics }
 export { getJobsErrorMessage, jobsErrorMessages } from '@/types/jobs'
 
 /**
@@ -42,3 +44,12 @@ export async function getJob(jobId: number): Promise<Job> {
     const response = await apiClient.get<Job>(`/jobs/${jobId}`)
     return jobSchema.parse(response.data)
 }
+
+/**
+ * Get job statistics (total, active, completed, failed counts)
+ */
+export async function getJobStatistics(): Promise<JobStatistics> {
+    const response = await apiClient.get<JobStatistics>('/jobs/statistics')
+    return jobStatisticsSchema.parse(response.data)
+}
+

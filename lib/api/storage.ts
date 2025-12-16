@@ -22,8 +22,8 @@ export { getStorageErrorMessage, storageErrorMessages } from '@/types/storage'
  */
 export async function getGoogleDriveAuthUrl(profileName?: string): Promise<GoogleDriveConnectResponse> {
     const url = profileName
-        ? `/storage/google-drive/connect?profileName=${encodeURIComponent(profileName)}`
-        : '/storage/google-drive/connect'
+        ? `/storage/gdrive/connect?profileName=${encodeURIComponent(profileName)}`
+        : '/storage/gdrive/connect'
 
     const response = await apiClient.get<GoogleDriveConnectResponse>(url)
     return GoogleDriveConnectResponseSchema.parse(response.data)

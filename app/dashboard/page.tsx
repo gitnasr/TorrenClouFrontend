@@ -11,7 +11,7 @@ import {
   mockWalletBalance,
   mockTransactions,
 } from '@/lib/mockData'
-import { useJobs } from '@/hooks/useJobs'
+import { useJobs, useJobStatistics } from '@/hooks/useJobs'
 import { useJobsStore } from '@/stores/jobsStore'
 import type { UserJob } from '@/types/api'
 import type { Job } from '@/types/jobs'
@@ -54,21 +54,11 @@ export default function DashboardPage() {
   // Fetch recent jobs (limited to 3)
   const { data: jobsData, isLoading: jobsLoading } = useJobs()
 
+  // Fetch job statistics from dedicated endpoint
+  const { data: jobStats, isLoading: statsLoading } = useJobStatistics()
+
   // Get recent 3 jobs regardless of status
   const recentJobs = jobsData?.items.slice(0, 3) ?? []
-
-  // Calculate stats from fetched data
-  const stats = jobsData ? {
-    activeJobs: jobsData.items.filter((j) =>
-      ['QUEUED', 'PROCESSING', 'UPLOADING'].includes(j.status)
-    ).length,
-    completedJobs: jobsData.items.filter((j) => j.status === 'COMPLETED').length,
-    totalTransactions: mockTransactions.length,
-  } : {
-    activeJobs: 0,
-    completedJobs: 0,
-    totalTransactions: mockTransactions.length,
-  }
 
   return (
     <div className="space-y-6">
@@ -96,10 +86,18 @@ export default function DashboardPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-4xl font-bold">{stats.activeJobs}</p>
-            <p className="text-sm text-muted-foreground">
-              {stats.completedJobs} completed
-            </p>
+            {statsLoading ? (
+              <div className="flex items-center gap-2">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <>
+                <p className="text-4xl font-bold">{jobStats?.activeJobs ?? 0}</p>
+                <p className="text-sm text-muted-foreground">
+                  {jobStats?.completedJobs ?? 0} completed
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>

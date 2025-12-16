@@ -2,10 +2,10 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
-import { getJobs, getJob } from '@/lib/api/jobs'
+import { getJobs, getJob, getJobStatistics } from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import type { JobsQueryParams, PaginatedJobs, Job } from '@/types/jobs'
-import { paginatedJobsSchema, jobSchema } from '@/types/jobs'
+import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics } from '@/types/jobs'
+import { paginatedJobsSchema, jobSchema, jobStatisticsSchema } from '@/types/jobs'
 
 // ============================================
 // Query Keys
@@ -17,6 +17,7 @@ export const jobsKeys = {
     list: (params: JobsQueryParams) => [...jobsKeys.lists(), params] as const,
     details: () => [...jobsKeys.all, 'detail'] as const,
     detail: (id: number) => [...jobsKeys.details(), id] as const,
+    statistics: () => [...jobsKeys.all, 'statistics'] as const,
 }
 
 // ============================================
@@ -81,6 +82,30 @@ export function useJob(jobId: number | null) {
 }
 
 /**
+ * Hook to fetch job statistics
+ * Auto-refetches every 10 seconds if there are active jobs
+ */
+export function useJobStatistics() {
+    const { status } = useSession()
+
+    return useQuery({
+        queryKey: jobsKeys.statistics(),
+        queryFn: async () => {
+            const data = await getJobStatistics()
+            // Validate with Zod
+            return jobStatisticsSchema.parse(data)
+        },
+        enabled: status === 'authenticated',
+        staleTime: 10 * 1000, // 10 seconds
+        refetchInterval: (query) => {
+            // Auto-refetch every 10 seconds if there are active jobs
+            const data = query.state.data as JobStatistics | undefined
+            return (data?.activeJobs ?? 0) > 0 ? 10000 : false
+        },
+    })
+}
+
+/**
  * Hook to prefetch the next page of jobs
  */
 export function usePrefetchNextPage() {
@@ -104,3 +129,4 @@ export function usePrefetchNextPage() {
         }
     }
 }
+
