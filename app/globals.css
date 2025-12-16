@@ -4,25 +4,45 @@
 
 @layer base {
   :root {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* DARK MODE ONLY - TorreClou Professional Dark Theme */
+
+    /* Background: surface-a0 #121212 */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 95%;
+
+    /* Card: surface-tonal-a0 #161d1b */
+    --card: 160 12% 10%;
+    --card-foreground: 0 0% 95%;
+
+    /* Popover: surface-a10 #282828 */
+    --popover: 0 0% 16%;
+    --popover-foreground: 0 0% 95%;
+
+    /* Primary: #128775 (teal) */
+    --primary: 170 76% 30%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary: surface-tonal-a10 #2b3230 */
+    --secondary: 160 8% 18%;
+    --secondary-foreground: 0 0% 90%;
+
+    /* Muted: surface-a20 #3f3f3f */
+    --muted: 0 0% 25%;
+    --muted-foreground: 0 0% 55%;
+
+    /* Accent: primary-a10 #3c9483 */
+    --accent: 165 43% 41%;
+    --accent-foreground: 0 0% 100%;
+
+    /* Destructive: danger-a0 #9c2121 */
+    --destructive: 0 66% 37%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Border/Input: surface-a20 #3f3f3f */
+    --border: 0 0% 25%;
+    --input: 0 0% 25%;
+    --ring: 170 76% 30%;
+
     --radius: 0.5rem;
   }
 }
@@ -31,8 +51,40 @@
   * {
     @apply border-border;
   }
+
+  html,
+  body {
+    @apply h-screen overflow-hidden;
+  }
+
   body {
     @apply bg-background text-foreground;
   }
 }
 
+/* Custom utility classes */
+@layer utilities {
+  .gradient-primary {
+    background: linear-gradient(135deg, #128775 0%, #3c9483 100%);
+  }
+
+  .gradient-surface {
+    background: linear-gradient(180deg, #282828 0%, #121212 100%);
+  }
+
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}

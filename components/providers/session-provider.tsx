@@ -7,3 +7,4 @@ export function NextAuthSessionProvider({ children }: { children: ReactNode }) {
   return <SessionProvider>{children}</SessionProvider>
 }
 
+

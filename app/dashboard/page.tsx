@@ -1,163 +1,185 @@
 'use client'
 
-import { useState } from 'react'
+import { BalanceCard } from '@/components/wallet/balance-card'
+import { TransactionList } from '@/components/wallet/transaction-list'
+import { JobList, JobCard } from '@/components/jobs/job-card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useMutation } from '@tanstack/react-query'
-import apiClient from '@/lib/axios'
-import { toast } from 'sonner'
-import { Magnet, DollarSign, Play } from 'lucide-react'
-import { Skeleton } from '@/components/ui/skeleton'
-import type { QuoteResponse } from '@/types/api'
+import { Upload, FolderOpen, HardDrive, FileText, Loader2 } from 'lucide-react'
+import Link from 'next/link'
+import {
+  mockWalletBalance,
+  mockTransactions,
+} from '@/lib/mockData'
+import { useJobs } from '@/hooks/useJobs'
+import { useJobsStore } from '@/stores/jobsStore'
+import type { UserJob } from '@/types/api'
+import type { Job } from '@/types/jobs'
+import { JobStatus } from '@/types/enums'
+import { useEffect } from 'react'
+
+// Adapter function to convert Job to UserJob format for JobCard
+function toUserJob(job: Job): UserJob {
+  return {
+    id: job.id,
+    userId: 0,
+    storageProfileId: job.storageProfileId,
+    status: job.status as JobStatus,
+    type: job.type as any,
+    requestFileId: job.requestFileId,
+    errorMessage: job.errorMessage ?? undefined,
+    currentState: job.currentState ?? undefined,
+    startedAt: job.startedAt ?? undefined,
+    completedAt: job.completedAt ?? undefined,
+    lastHeartbeat: job.lastHeartbeat ?? undefined,
+    bytesDownloaded: job.bytesDownloaded,
+    totalBytes: job.totalBytes,
+    selectedFileIndices: job.selectedFileIndices,
+    progress: job.progressPercentage,
+    fileName: job.requestFileName ?? undefined,
+    storageProfileName: job.storageProfileName ?? undefined,
+  }
+}
 
 export default function DashboardPage() {
-  const [magnetLink, setMagnetLink] = useState('')
-  const [quote, setQuote] = useState<QuoteResponse | null>(null)
+  // Set page size to 3 for dashboard
+  const { setPageSize, setSelectedStatus } = useJobsStore()
 
-  const quoteMutation = useMutation<QuoteResponse, Error, string>({
-    mutationFn: async (magnet: string) => {
-      const response = await apiClient.post<QuoteResponse>('/torrents/quote', { magnet })
-      return response.data
-    },
-    onSuccess: (data) => {
-      setQuote(data)
-      toast.success('Quote calculated successfully')
-    },
-    onError: () => {
-      toast.error('Failed to get quote. Please check your magnet link.')
-    },
-  })
+  useEffect(() => {
+    // Reset to show all statuses and limit to 3
+    setSelectedStatus(null)
+    setPageSize(3)
+  }, [setPageSize, setSelectedStatus])
 
-  const startJobMutation = useMutation<{ jobId: string }, Error, string>({
-    mutationFn: async (magnet: string) => {
-      const response = await apiClient.post<{ jobId: string }>('/torrents/start', { magnet })
-      return response.data
-    },
-    onSuccess: () => {
-      toast.success('Download started! Check My Files for progress.')
-      setMagnetLink('')
-      setQuote(null)
-    },
-    onError: () => {
-      toast.error('Failed to start download. Please check your balance.')
-    },
-  })
+  // Fetch recent jobs (limited to 3)
+  const { data: jobsData, isLoading: jobsLoading } = useJobs()
 
-  const handleGetQuote = () => {
-    if (!magnetLink.trim()) {
-      toast.error('Please enter a magnet link')
-      return
-    }
-    quoteMutation.mutate(magnetLink)
-  }
+  // Get recent 3 jobs regardless of status
+  const recentJobs = jobsData?.items.slice(0, 3) ?? []
 
-  const handlePayAndStart = () => {
-    if (!magnetLink.trim()) {
-      toast.error('Please enter a magnet link')
-      return
-    }
-    startJobMutation.mutate(magnetLink)
-  }
-
-  const formatSize = (bytes: number) => {
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    if (bytes === 0) return '0 B'
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return Math.round(bytes / Math.pow(1024, i) * 100) / 100 + ' ' + sizes[i]
+  // Calculate stats from fetched data
+  const stats = jobsData ? {
+    activeJobs: jobsData.items.filter((j) =>
+      ['QUEUED', 'PROCESSING', 'UPLOADING'].includes(j.status)
+    ).length,
+    completedJobs: jobsData.items.filter((j) => j.status === 'COMPLETED').length,
+    totalTransactions: mockTransactions.length,
+  } : {
+    activeJobs: 0,
+    completedJobs: 0,
+    totalTransactions: mockTransactions.length,
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Paste your magnet link to get started
+          Welcome back! Here&apos;s an overview of your account.
         </p>
       </div>
 
+      {/* Quick Stats Row */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <BalanceCard
+          balance={mockWalletBalance.balance}
+          changeAmount={25.50}
+          changePercentage={19.5}
+        />
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base font-medium text-muted-foreground">
+              <FolderOpen className="h-4 w-4" />
+              Active Jobs
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-4xl font-bold">{stats.activeJobs}</p>
+            <p className="text-sm text-muted-foreground">
+              {stats.completedJobs} completed
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Magnet className="h-5 w-5" />
-            Magnet Link
-          </CardTitle>
-          <CardDescription>
-            Paste your magnet link or torrent file URL here
-          </CardDescription>
+          <CardTitle className="text-base font-medium">Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="magnet:?xt=urn:btih:..."
-              value={magnetLink}
-              onChange={(e) => setMagnetLink(e.target.value)}
-              className="flex-1"
-            />
-            <Button
-              onClick={handleGetQuote}
-              disabled={quoteMutation.isPending}
-            >
-              {quoteMutation.isPending ? 'Calculating...' : 'Get Quote'}
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Button asChild className="h-auto flex-col gap-2 py-4">
+              <Link href="/torrents/upload">
+                <Upload className="h-6 w-6" />
+                <span>Upload Torrent</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
+              <Link href="/torrents/jobs">
+                <FolderOpen className="h-6 w-6" />
+                <span>View Jobs</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
+              <Link href="/storage">
+                <HardDrive className="h-6 w-6" />
+                <span>Manage Storage</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
+              <Link href="/invoices">
+                <FileText className="h-6 w-6" />
+                <span>View Invoices</span>
+              </Link>
             </Button>
           </div>
-
-          {quoteMutation.isPending && (
-            <div className="space-y-2">
-              <Skeleton className="h-32 w-full" />
-            </div>
-          )}
-
-          {quote && !quoteMutation.isPending && (
-            <Card className="border-primary">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5" />
-                  Pricing
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Filename</p>
-                    <p className="font-medium">{quote.filename}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Size</p>
-                    <p className="font-medium">{formatSize(quote.size)}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Health</p>
-                    <p className="font-medium">{quote.health}%</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Cost</p>
-                    <p className="text-2xl font-bold text-primary">
-                      ${quote.cost.toFixed(2)}
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  onClick={handlePayAndStart}
-                  disabled={startJobMutation.isPending}
-                  className="w-full"
-                  size="lg"
-                >
-                  {startJobMutation.isPending ? (
-                    'Starting...'
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-5 w-5" />
-                      Pay & Start
-                    </>
-                  )}
-                </Button>
-              </CardContent>
-            </Card>
-          )}
         </CardContent>
       </Card>
+
+      {/* Main Content Grid */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Recent Jobs (3 most recent regardless of status) */}
+        <Card>
+          <div className="flex items-center justify-between p-6 pb-4">
+            <h2 className="text-lg font-semibold">Recent Jobs</h2>
+            {recentJobs.length > 0 && (
+              <Link href="/torrents/jobs" className="text-sm text-primary hover:underline">
+                View All
+              </Link>
+            )}
+          </div>
+          <CardContent className="pt-0">
+            {jobsLoading ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            ) : recentJobs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <FolderOpen className="mb-3 h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground">No jobs yet. Upload a torrent to get started!</p>
+                <Button asChild variant="outline" size="sm" className="mt-4">
+                  <Link href="/torrents/upload">Upload Torrent</Link>
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentJobs.map((job) => (
+                  <JobCard key={job.id} job={toUserJob(job)} />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Transactions */}
+        <TransactionList
+          transactions={mockTransactions}
+          limit={5}
+        />
+      </div>
     </div>
   )
 }
-
