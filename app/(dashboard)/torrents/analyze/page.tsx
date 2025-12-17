@@ -1,65 +1,118 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, ArrowRight, FileText, Copy, Check, HardDrive } from 'lucide-react'
-import { formatFileSize, formatInfoHash } from '@/lib/utils/formatters'
-import { mockTorrentAnalysis, mockTorrentHealth } from '@/lib/mockData'
+import { Input } from '@/components/ui/input'
+import {
+    ArrowLeft,
+    ArrowRight,
+    FileText,
+    Copy,
+    Check,
+    Loader2,
+    Tag,
+    X,
+    Zap,
+    Clock,
+    AlertCircle,
+} from 'lucide-react'
+import { formatFileSize, formatInfoHash, formatCurrency, calculateTorrentHealth, getTimeRemaining } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import {
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalFooter,
+    ModalTitle,
+    ModalDescription,
+} from '@/components/ui/modal'
+
+import { useTorrentStore } from '@/stores/torrentStore'
+import { useTorrentQuote } from '@/hooks/useTorrents'
+import { useWalletBalance, useInvoicePayment } from '@/hooks/usePayments'
 
 export default function TorrentAnalyzePage() {
     const router = useRouter()
-    const [selectedFiles, setSelectedFiles] = useState<number[]>([])
     const [copied, setCopied] = useState(false)
+    const [voucherCode, setVoucherCode] = useState('')
+    const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [showInsufficientModal, setShowInsufficientModal] = useState(false)
 
-    const analysis = mockTorrentAnalysis
-    const health = mockTorrentHealth
+    // Zustand store
+    const {
+        analysisResult,
+        selectedFileIndices,
+        quoteResult,
+        toggleFileSelection,
+        selectAllFiles,
+        deselectAllFiles,
+    } = useTorrentStore()
 
-    // Initialize with all files selected
+    // API hooks
+    const { mutate: getQuote, isPending: isGettingQuote } = useTorrentQuote()
+    const { data: walletData, isLoading: isLoadingBalance } = useWalletBalance()
+    const { mutate: payInvoice, isPending: isPaying } = useInvoicePayment()
+
+    // Redirect to upload if no analysis result
     useEffect(() => {
-        setSelectedFiles(analysis.files.map((f) => f.index))
-    }, [analysis.files])
+        if (!analysisResult) {
+            router.push('/torrents/upload')
+        }
+    }, [analysisResult, router])
+
+    if (!analysisResult) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+        )
+    }
+
+    // Calculate health from scrape result
+    const health = calculateTorrentHealth(analysisResult.scrapeResult)
+
+    // Calculate selected size
+    const selectedSize = analysisResult.files
+        .filter((f) => selectedFileIndices.includes(f.index))
+        .reduce((acc, f) => acc + f.size, 0)
 
     const handleCopyHash = () => {
-        navigator.clipboard.writeText(analysis.infoHash)
+        navigator.clipboard.writeText(analysisResult.infoHash)
         setCopied(true)
         toast.success('Info hash copied to clipboard')
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const toggleFile = (index: number) => {
-        setSelectedFiles((prev) =>
-            prev.includes(index)
-                ? prev.filter((i) => i !== index)
-                : [...prev, index]
-        )
-    }
-
-    const selectAll = () => {
-        setSelectedFiles(analysis.files.map((f) => f.index))
-    }
-
-    const deselectAll = () => {
-        setSelectedFiles([])
-    }
-
-    const selectedSize = analysis.files
-        .filter((f) => selectedFiles.includes(f.index))
-        .reduce((acc, f) => acc + f.size, 0)
-
-    const handleContinue = () => {
-        if (selectedFiles.length === 0) {
+    const handleGetQuote = () => {
+        if (selectedFileIndices.length === 0) {
             toast.error('Please select at least one file')
             return
         }
+        getQuote(voucherCode || undefined)
+    }
 
-        sessionStorage.setItem('selectedFiles', JSON.stringify(selectedFiles))
-        router.push('/torrents/quote')
+    const handlePay = () => {
+        if (!quoteResult) return
+
+        const balance = walletData?.balance ?? 0
+        const finalAmount = quoteResult.finalAmountInUSD
+
+        if (balance < finalAmount) {
+            setShowInsufficientModal(true)
+            return
+        }
+        setShowPaymentModal(true)
+    }
+
+    const confirmPayment = () => {
+        if (!quoteResult) return
+        payInvoice(quoteResult.invoiceId)
+        setShowPaymentModal(false)
     }
 
     const getHealthColor = (score: number) => {
@@ -67,6 +120,10 @@ export default function TorrentAnalyzePage() {
         if (score >= 50) return 'text-warning'
         return 'text-sage'
     }
+
+    const balance = walletData?.balance ?? 0
+    const finalAmount = quoteResult?.finalAmountInUSD ?? 0
+    const hasInsufficientBalance = quoteResult ? balance < finalAmount : false
 
     return (
         <div className="space-y-6">
@@ -92,10 +149,10 @@ export default function TorrentAnalyzePage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
-                                {analysis.name}
+                                {analysisResult.name}
                             </CardTitle>
                             <CardDescription className="flex items-center gap-2">
-                                <span className="font-mono text-xs">{formatInfoHash(analysis.infoHash, 12)}</span>
+                                <span className="font-mono text-xs">{formatInfoHash(analysisResult.infoHash, 12)}</span>
                                 <button onClick={handleCopyHash} className="text-primary hover:text-primary/80">
                                     {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                                 </button>
@@ -105,15 +162,15 @@ export default function TorrentAnalyzePage() {
                             <div className="grid gap-4 sm:grid-cols-3">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Total Size</p>
-                                    <p className="font-medium">{formatFileSize(analysis.totalSize)}</p>
+                                    <p className="font-medium">{formatFileSize(analysisResult.totalSize)}</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Files</p>
-                                    <p className="font-medium">{analysis.files.length} files</p>
+                                    <p className="font-medium">{analysisResult.files.length} files</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Trackers</p>
-                                    <p className="font-medium">{analysis.trackers.length} trackers</p>
+                                    <p className="font-medium">{analysisResult.trackers.length} trackers</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -125,35 +182,35 @@ export default function TorrentAnalyzePage() {
                             <div>
                                 <CardTitle>Select Files</CardTitle>
                                 <CardDescription>
-                                    Choose which files to download ({selectedFiles.length} of {analysis.files.length} selected)
+                                    Choose which files to download ({selectedFileIndices.length} of {analysisResult.files.length} selected)
                                 </CardDescription>
                             </div>
                             <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={selectAll}>
+                                <Button variant="outline" size="sm" onClick={selectAllFiles}>
                                     Select All
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={deselectAll}>
+                                <Button variant="outline" size="sm" onClick={deselectAllFiles}>
                                     Deselect All
                                 </Button>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="space-y-2">
-                                {analysis.files.map((file) => (
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                                {analysisResult.files.map((file) => (
                                     <div
                                         key={file.index}
                                         className={cn(
                                             'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
-                                            selectedFiles.includes(file.index)
+                                            selectedFileIndices.includes(file.index)
                                                 ? 'border-primary bg-primary/5'
                                                 : 'border-border hover:bg-muted/50'
                                         )}
-                                        onClick={() => toggleFile(file.index)}
+                                        onClick={() => toggleFileSelection(file.index)}
                                     >
                                         <input
                                             type="checkbox"
-                                            checked={selectedFiles.includes(file.index)}
-                                            onChange={() => toggleFile(file.index)}
+                                            checked={selectedFileIndices.includes(file.index)}
+                                            onChange={() => toggleFileSelection(file.index)}
                                             className="h-4 w-4 rounded border-muted-foreground"
                                         />
                                         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -168,6 +225,81 @@ export default function TorrentAnalyzePage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Quote Result - Pricing Breakdown */}
+                    {quoteResult && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span>Pricing Breakdown</span>
+                                    {quoteResult.isCached && (
+                                        <Badge variant="warning" className="flex items-center gap-1">
+                                            <Zap className="h-3 w-3" />
+                                            Cached
+                                        </Badge>
+                                    )}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                        Size ({quoteResult.pricingDetails.totalSizeInGb.toFixed(2)} GB × ${quoteResult.pricingDetails.baseRatePerGb}/GB)
+                                    </span>
+                                    <span>{formatCurrency(quoteResult.pricingDetails.totalSizeInGb * quoteResult.pricingDetails.baseRatePerGb, 'USD')}</span>
+                                </div>
+                                {quoteResult.pricingDetails.regionMultiplier !== 1 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Region adjustment ({quoteResult.pricingDetails.userRegion})</span>
+                                        <span>×{quoteResult.pricingDetails.regionMultiplier}</span>
+                                    </div>
+                                )}
+                                {quoteResult.pricingDetails.healthMultiplier !== 1 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Health adjustment</span>
+                                        <span className="text-teal-secondary">×{quoteResult.pricingDetails.healthMultiplier}</span>
+                                    </div>
+                                )}
+                                {quoteResult.pricingDetails.isCacheHit && quoteResult.pricingDetails.cacheDiscountAmount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground flex items-center gap-1">
+                                            <Zap className="h-3.5 w-3.5 text-warning" />
+                                            Cache discount
+                                        </span>
+                                        <span className="text-teal-secondary">-{formatCurrency(quoteResult.pricingDetails.cacheDiscountAmount, 'USD')}</span>
+                                    </div>
+                                )}
+                                <div className="border-t pt-3">
+                                    <div className="flex justify-between">
+                                        <span className="font-medium">Total</span>
+                                        <span className="text-2xl font-bold text-primary">{formatCurrency(quoteResult.finalAmountInUSD, 'USD')}</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Voucher Input */}
+                    {!quoteResult && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Tag className="h-5 w-5" />
+                                    Voucher Code
+                                </CardTitle>
+                                <CardDescription>Have a voucher? Enter it before getting a quote</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex gap-2">
+                                    <Input
+                                        placeholder="Enter voucher code"
+                                        value={voucherCode}
+                                        onChange={(e) => setVoucherCode(e.target.value)}
+                                        className="flex-1"
+                                    />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Sidebar */}
@@ -190,44 +322,154 @@ export default function TorrentAnalyzePage() {
                             </div>
                             <div className="grid grid-cols-3 gap-2 text-center text-sm">
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-teal-secondary">{health.seeders}</p>
+                                    <p className="font-medium text-teal-secondary">{analysisResult.scrapeResult.seeders}</p>
                                     <p className="text-xs text-muted-foreground">Seeders</p>
                                 </div>
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-sage">{health.leechers}</p>
+                                    <p className="font-medium text-sage">{analysisResult.scrapeResult.leechers}</p>
                                     <p className="text-xs text-muted-foreground">Leechers</p>
                                 </div>
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium">{health.completed}</p>
+                                    <p className="font-medium">{analysisResult.scrapeResult.completed}</p>
                                     <p className="text-xs text-muted-foreground">Completed</p>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Selection Summary */}
-                    <Card>
+                    {/* Selection Summary / Quote / Payment */}
+                    <Card className={cn(quoteResult && hasInsufficientBalance && 'border-sage/50')}>
                         <CardHeader>
-                            <CardTitle className="text-base">Selection Summary</CardTitle>
+                            <CardTitle className="text-base">
+                                {quoteResult ? 'Payment' : 'Selection Summary'}
+                            </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Selected files</span>
-                                <span className="font-medium">{selectedFiles.length}</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Total size</span>
-                                <span className="font-medium">{formatFileSize(selectedSize)}</span>
-                            </div>
-                            <Button onClick={handleContinue} className="w-full" disabled={selectedFiles.length === 0}>
-                                Get Quote
-                                <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
+                            {!quoteResult ? (
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Selected files</span>
+                                        <span className="font-medium">{selectedFileIndices.length}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Total size</span>
+                                        <span className="font-medium">{formatFileSize(selectedSize)}</span>
+                                    </div>
+                                    <Button
+                                        onClick={handleGetQuote}
+                                        className="w-full"
+                                        disabled={selectedFileIndices.length === 0 || isGettingQuote}
+                                    >
+                                        {isGettingQuote ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Getting Quote...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Get Quote
+                                                <ArrowRight className="ml-2 h-4 w-4" />
+                                            </>
+                                        )}
+                                    </Button>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Your balance</span>
+                                        <span className="font-medium">
+                                            {isLoadingBalance ? '...' : formatCurrency(balance, 'USD')}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-muted-foreground">Invoice amount</span>
+                                        <span className="font-medium">{formatCurrency(finalAmount, 'USD')}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between border-t pt-2">
+                                        <span className="text-muted-foreground">Balance after</span>
+                                        <span className={cn(
+                                            'font-medium',
+                                            hasInsufficientBalance ? 'text-sage' : 'text-teal-secondary'
+                                        )}>
+                                            {formatCurrency(balance - finalAmount, 'USD')}
+                                        </span>
+                                    </div>
+
+                                    {hasInsufficientBalance && (
+                                        <div className="flex items-start gap-2 rounded-lg bg-sage/10 p-3 text-sm">
+                                            <AlertCircle className="h-4 w-4 shrink-0 text-sage mt-0.5" />
+                                            <p className="text-sage">
+                                                Insufficient balance. You need {formatCurrency(finalAmount - balance, 'USD')} more.
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <Button onClick={handlePay} className="w-full" size="lg">
+                                        {hasInsufficientBalance ? 'Add Funds to Pay' : `Pay ${formatCurrency(finalAmount, 'USD')}`}
+                                    </Button>
+                                </>
+                            )}
                         </CardContent>
                     </Card>
                 </div>
             </div>
+
+            {/* Payment Confirmation Modal */}
+            <Modal open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+                <ModalContent>
+                    <ModalHeader>
+                        <ModalTitle>Confirm Payment</ModalTitle>
+                        <ModalDescription>
+                            You are about to pay {formatCurrency(finalAmount, 'USD')} for this download.
+                        </ModalDescription>
+                    </ModalHeader>
+                    <div className="space-y-2 py-4">
+                        <div className="flex justify-between text-sm">
+                            <span>File</span>
+                            <span className="font-medium">{quoteResult?.fileName}</span>
+                        </div>
+                        <div className="flex justify-between text-sm">
+                            <span>Amount</span>
+                            <span className="font-medium">{formatCurrency(finalAmount, 'USD')}</span>
+                        </div>
+                    </div>
+                    <ModalFooter>
+                        <Button variant="outline" onClick={() => setShowPaymentModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={confirmPayment} disabled={isPaying}>
+                            {isPaying ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                'Confirm Payment'
+                            )}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Insufficient Balance Modal */}
+            <Modal open={showInsufficientModal} onOpenChange={setShowInsufficientModal}>
+                <ModalContent>
+                    <ModalHeader>
+                        <ModalTitle>Insufficient Balance</ModalTitle>
+                        <ModalDescription>
+                            You need {formatCurrency(finalAmount - balance, 'USD')} more to complete this payment.
+                        </ModalDescription>
+                    </ModalHeader>
+                    <ModalFooter>
+                        <Button variant="outline" onClick={() => setShowInsufficientModal(false)}>
+                            Cancel
+                        </Button>
+                        <Button asChild>
+                            <Link href="/wallet/deposits/new">Add Funds</Link>
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </div>
     )
 }
-

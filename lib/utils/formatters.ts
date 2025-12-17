@@ -171,3 +171,52 @@ export function getInitials(name: string): string {
 export function formatExchangeRate(rate: number): string {
     return `1 N = $${rate.toFixed(2)} USD`
 }
+
+/**
+ * Calculate torrent health from scrape results
+ * Matches backend TorrentHealthService logic:
+ * - Health score: 50% seeders count, 30% seeder/leecher ratio, 20% completeness
+ * - Health status: Healthy (seeders >= 10), Weak (seeders <= 2), Dead (seeders == 0 && leechers == 0)
+ */
+export function calculateTorrentHealth(scrapeResult: {
+    seeders: number
+    leechers: number
+    completed: number
+}): {
+    healthScore: number
+    isHealthy: boolean
+    isWeak: boolean
+    isDead: boolean
+    seederRatio: number
+} {
+    const { seeders, leechers, completed } = scrapeResult
+
+    // Calculate seeder ratio (seeders / leechers)
+    const seederRatio = leechers > 0 ? seeders / leechers : seeders > 0 ? Number.MAX_SAFE_INTEGER : 0
+
+    // Check health status
+    const isDead = seeders === 0 && leechers === 0
+    const isWeak = !isDead && seeders <= 2
+    const isHealthy = seeders >= 10
+
+    // Calculate health score (0-100)
+    // 50% from seeders count (capped at 100 seeders = max score)
+    const seederScore = Math.min(seeders / 100, 1) * 50
+
+    // 30% from seeder/leecher ratio (capped at 10:1 ratio = max score)
+    const ratioScore = Math.min(seederRatio / 10, 1) * 30
+
+    // 20% from completeness (having at least 100 completes = max score)
+    const completenessScore = Math.min(completed / 100, 1) * 20
+
+    const healthScore = Math.round(seederScore + ratioScore + completenessScore)
+
+    return {
+        healthScore,
+        isHealthy,
+        isWeak,
+        isDead,
+        seederRatio: Number(seederRatio.toFixed(2)),
+    }
+}
+

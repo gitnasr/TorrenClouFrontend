@@ -1,37 +1,24 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { FileUpload } from '@/components/ui/file-upload'
-import { Upload, ArrowRight, Info } from 'lucide-react'
+import { Upload, ArrowRight, Info, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { useTorrentAnalysis } from '@/hooks/useTorrents'
 
 export default function TorrentUploadPage() {
-    const router = useRouter()
     const [file, setFile] = useState<File | null>(null)
-    const [isAnalyzing, setIsAnalyzing] = useState(false)
+    const { mutate: analyze, isPending } = useTorrentAnalysis()
 
-    const handleAnalyze = async () => {
+    const handleAnalyze = () => {
         if (!file) {
             toast.error('Please select a torrent file')
             return
         }
 
-        setIsAnalyzing(true)
-
-        // Simulate analysis delay
-        await new Promise((resolve) => setTimeout(resolve, 1500))
-
-        // Store file info in sessionStorage for the analyze page
-        sessionStorage.setItem('torrentFile', JSON.stringify({
-            name: file.name,
-            size: file.size,
-        }))
-
-        toast.success('Torrent analyzed successfully!')
-        router.push('/torrents/analyze')
+        analyze(file)
     }
 
     return (
@@ -61,16 +48,20 @@ export default function TorrentUploadPage() {
                         maxSize={10 * 1024 * 1024}
                         onFileSelect={setFile}
                         selectedFile={file}
+                        disabled={isPending}
                     />
 
                     <Button
                         onClick={handleAnalyze}
-                        disabled={!file || isAnalyzing}
+                        disabled={!file || isPending}
                         className="w-full"
                         size="lg"
                     >
-                        {isAnalyzing ? (
-                            'Analyzing...'
+                        {isPending ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Analyzing...
+                            </>
                         ) : (
                             <>
                                 Analyze Torrent
@@ -99,4 +90,3 @@ export default function TorrentUploadPage() {
         </div>
     )
 }
-
