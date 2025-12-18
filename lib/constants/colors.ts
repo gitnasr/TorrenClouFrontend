@@ -45,8 +45,10 @@ export const depositStatusBadgeVariant = {
 
 export const jobStatusBadgeVariant = {
     Queued: 'pending' as const,
-    Processing: 'processing' as const,
+    Downloading: 'processing' as const,
+    PendingUpload: 'pending' as const,
     Uploading: 'secondary' as const,
+    Retrying: 'processing' as const,
     Completed: 'success' as const,
     Failed: 'destructive' as const,
     Cancelled: 'secondary' as const,

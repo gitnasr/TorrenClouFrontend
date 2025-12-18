@@ -10,8 +10,10 @@ import { Filter, X } from 'lucide-react'
 const statusOptions: { value: JobStatus | null; label: string }[] = [
     { value: null, label: 'All Statuses' },
     { value: JobStatus.QUEUED, label: 'Queued' },
-    { value: JobStatus.PROCESSING, label: 'Processing' },
+    { value: JobStatus.DOWNLOADING, label: 'Downloading' },
+    { value: JobStatus.PENDING_UPLOAD, label: 'Pending Upload' },
     { value: JobStatus.UPLOADING, label: 'Uploading' },
+    { value: JobStatus.RETRYING, label: 'Retrying' },
     { value: JobStatus.COMPLETED, label: 'Completed' },
     { value: JobStatus.FAILED, label: 'Failed' },
     { value: JobStatus.CANCELLED, label: 'Cancelled' },

@@ -41,12 +41,19 @@ const statusConfig: Record<JobStatus, {
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
-    [JobStatus.PROCESSING]: {
+    [JobStatus.DOWNLOADING]: {
         icon: <Download className="h-5 w-5" />,
         badgeVariant: 'processing',
         label: 'Downloading',
         color: 'text-primary',
         bgColor: 'bg-primary/20',
+    },
+    [JobStatus.PENDING_UPLOAD]: {
+        icon: <Clock className="h-5 w-5" />,
+        badgeVariant: 'pending',
+        label: 'Pending Upload',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
     },
     [JobStatus.UPLOADING]: {
         icon: <Upload className="h-5 w-5" />,
@@ -54,6 +61,13 @@ const statusConfig: Record<JobStatus, {
         label: 'Uploading',
         color: 'text-info',
         bgColor: 'bg-info/20',
+    },
+    [JobStatus.RETRYING]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        badgeVariant: 'processing',
+        label: 'Retrying',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
     },
     [JobStatus.COMPLETED]: {
         icon: <CheckCircle className="h-5 w-5" />,

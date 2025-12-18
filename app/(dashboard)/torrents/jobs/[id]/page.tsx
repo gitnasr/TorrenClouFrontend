@@ -42,17 +42,29 @@ const statusConfig: Record<string, {
         label: 'Queued',
         color: 'text-warning',
     },
-    PROCESSING: {
+    DOWNLOADING: {
         icon: <Download className="h-6 w-6" />,
         badgeVariant: 'processing',
         label: 'Downloading',
         color: 'text-teal-primary',
+    },
+    PENDING_UPLOAD: {
+        icon: <Clock className="h-6 w-6" />,
+        badgeVariant: 'pending',
+        label: 'Pending Upload',
+        color: 'text-warning',
     },
     UPLOADING: {
         icon: <Upload className="h-6 w-6" />,
         badgeVariant: 'secondary',
         label: 'Uploading',
         color: 'text-teal-secondary',
+    },
+    RETRYING: {
+        icon: <RefreshCcw className="h-6 w-6" />,
+        badgeVariant: 'processing',
+        label: 'Retrying',
+        color: 'text-warning',
     },
     COMPLETED: {
         icon: <CheckCircle className="h-6 w-6" />,
@@ -165,7 +177,7 @@ export default function JobDetailsPage() {
     }
 
     const config = statusConfig[job.status] || statusConfig.QUEUED
-    const isActive = ['QUEUED', 'PROCESSING', 'UPLOADING'].includes(job.status)
+    const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'RETRYING'].includes(job.status)
 
     return (
         <div className="space-y-6">

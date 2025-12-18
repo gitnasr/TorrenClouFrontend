@@ -21,8 +21,10 @@ import type { Job } from '@/types/jobs'
 const statusFilters = [
     { label: 'All', value: 'all' },
     { label: 'Queued', value: JobStatus.QUEUED },
-    { label: 'Processing', value: JobStatus.PROCESSING },
+    { label: 'Downloading', value: JobStatus.DOWNLOADING },
+    { label: 'Pending Upload', value: JobStatus.PENDING_UPLOAD },
     { label: 'Uploading', value: JobStatus.UPLOADING },
+    { label: 'Retrying', value: JobStatus.RETRYING },
     { label: 'Completed', value: JobStatus.COMPLETED },
     { label: 'Failed', value: JobStatus.FAILED },
 ]
@@ -128,7 +130,7 @@ function JobsListContent() {
     const stats = data ? {
         total: data.totalCount,
         active: data.items.filter((j) =>
-            ['QUEUED', 'PROCESSING', 'UPLOADING'].includes(j.status)
+            ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'RETRYING'].includes(j.status)
         ).length,
         completed: data.items.filter((j) => j.status === 'COMPLETED').length,
         failed: data.items.filter((j) => j.status === 'FAILED').length,

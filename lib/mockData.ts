@@ -400,7 +400,7 @@ export const mockJobs: UserJob[] = [
         id: 2,
         userId: 1,
         storageProfileId: 1,
-        status: JobStatus.PROCESSING,
+        status: JobStatus.DOWNLOADING,
         type: JobType.Torrent,
         requestFileId: 2,
         currentState: 'Downloading files...',

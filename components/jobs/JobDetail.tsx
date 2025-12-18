@@ -39,17 +39,29 @@ const statusConfig: Record<string, {
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
-    PROCESSING: {
+    DOWNLOADING: {
         icon: <Download className="h-5 w-5" />,
         label: 'Downloading',
         color: 'text-primary',
         bgColor: 'bg-primary/20',
+    },
+    PENDING_UPLOAD: {
+        icon: <Clock className="h-5 w-5" />,
+        label: 'Pending Upload',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
     },
     UPLOADING: {
         icon: <Upload className="h-5 w-5" />,
         label: 'Uploading',
         color: 'text-info',
         bgColor: 'bg-info/20',
+    },
+    RETRYING: {
+        icon: <Activity className="h-5 w-5" />,
+        label: 'Retrying',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
     },
     COMPLETED: {
         icon: <CheckCircle className="h-5 w-5" />,

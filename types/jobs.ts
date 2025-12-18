@@ -9,8 +9,10 @@ import type { UserJob } from './api'
 
 export const jobStatusSchema = z.enum([
     'QUEUED',
-    'PROCESSING',
+    'DOWNLOADING',
+    'PENDING_UPLOAD',
     'UPLOADING',
+    'RETRYING',
     'COMPLETED',
     'FAILED',
     'CANCELLED',
@@ -75,7 +77,7 @@ export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 export interface JobsQueryParams {
     pageNumber?: number
     pageSize?: number
-    status?: 'QUEUED' | 'PROCESSING' | 'UPLOADING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | null
+    status?: 'QUEUED' | 'DOWNLOADING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'RETRYING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | null
 }
 
 // ============================================
@@ -119,8 +121,10 @@ export interface JobsPaginationProps {
 
 export const statusLabels: Record<JobStatus, string> = {
     [JobStatus.QUEUED]: 'Queued',
-    [JobStatus.PROCESSING]: 'Processing',
+    [JobStatus.DOWNLOADING]: 'Downloading',
+    [JobStatus.PENDING_UPLOAD]: 'Pending Upload',
     [JobStatus.UPLOADING]: 'Uploading',
+    [JobStatus.RETRYING]: 'Retrying',
     [JobStatus.COMPLETED]: 'Completed',
     [JobStatus.FAILED]: 'Failed',
     [JobStatus.CANCELLED]: 'Cancelled',
