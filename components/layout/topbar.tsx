@@ -23,7 +23,7 @@ function WalletBalance() {
   const { data: balance, isLoading } = useQuery<number>({
     queryKey: ['wallet-balance'],
     queryFn: async () => {
-      const response = await apiClient.get<{ balance: number }>('/wallet/balance')
+      const response = await apiClient.get<{ balance: number }>('payments/wallet/balance')
       return response.data.balance
     },
     enabled: !!session?.backendToken,

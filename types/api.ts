@@ -46,6 +46,7 @@ export interface BackendUserData {
   image?: string | null
   balance?: number
   region?: string
+  role?: UserRole
 }
 
 // ============================================
@@ -260,6 +261,7 @@ export interface UserJob {
   // Display fields
   fileName?: string
   storageProfileName?: string
+  createdAt?: string
 }
 
 export interface JobCreationResult {

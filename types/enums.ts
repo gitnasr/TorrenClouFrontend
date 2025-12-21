@@ -54,17 +54,27 @@ export enum DepositStatus {
 export enum JobStatus {
     QUEUED = "QUEUED",
     DOWNLOADING = "DOWNLOADING",
+    /** @internal Admin-only: Internal sync stage for building storage cache */
+    SYNCING = "SYNCING",
     PENDING_UPLOAD = "PENDING_UPLOAD",
     UPLOADING = "UPLOADING",
     RETRYING = "RETRYING",
+    TORRENT_DOWNLOAD_RETRY = "TORRENT_DOWNLOAD_RETRY",
+    UPLOAD_RETRY = "UPLOAD_RETRY",
+    /** @internal Admin-only: Internal sync retry stage */
+    SYNC_RETRY = "SYNC_RETRY",
     COMPLETED = "COMPLETED",
     FAILED = "FAILED",
-    CANCELLED = "CANCELLED"
+    CANCELLED = "CANCELLED",
+    TORRENT_FAILED = "TORRENT_FAILED",
+    UPLOAD_FAILED = "UPLOAD_FAILED",
+    GOOGLE_DRIVE_FAILED = "GOOGLE_DRIVE_FAILED"
 }
 
 export enum JobType {
     Torrent = "Torrent",
-    Other = "Other"
+    /** @internal Admin-only: Internal system sync jobs */
+    Sync = "Sync"
 }
 
 export enum ViolationType {

@@ -81,6 +81,7 @@ export const authConfig = {
           session.user.image = token.user.image ?? session.user.image ?? null
           session.user.balance = token.user.balance
           session.user.region = token.user.region
+          session.user.role = token.user.role
         }
       }
       return session

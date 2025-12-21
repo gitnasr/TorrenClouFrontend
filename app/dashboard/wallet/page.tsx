@@ -26,7 +26,7 @@ export default function WalletPage() {
   const { data: balance, isLoading: balanceLoading } = useQuery<number>({
     queryKey: ['wallet-balance'],
     queryFn: async () => {
-      const response = await apiClient.get<{ balance: number }>('/wallet/balance')
+      const response = await apiClient.get<{ balance: number }>('payments/wallet/balance')
       return response.data.balance
     },
     refetchInterval: 30000,

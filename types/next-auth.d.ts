@@ -2,6 +2,8 @@ import 'next-auth'
 import 'next-auth/jwt'
 import type { BackendUserData } from './api'
 
+import type { UserRole } from './enums'
+
 declare module 'next-auth' {
   interface Session {
     backendToken?: string
@@ -12,6 +14,7 @@ declare module 'next-auth' {
       image?: string | null
       balance?: number
       region?: string
+      role?: UserRole
     }
   }
 }

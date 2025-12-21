@@ -26,7 +26,7 @@ export const jobsKeys = {
 
 /**
  * Hook to fetch paginated jobs list
- * Auto-refetches every 3 seconds if there are active jobs
+ * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
  */
 export function useJobs() {
     const { status } = useSession()
@@ -45,18 +45,12 @@ export function useJobs() {
         },
         enabled: status === 'authenticated',
         staleTime: 5 * 1000, // 5 seconds - jobs update frequently
-        refetchInterval: (query) => {
-            // Auto-refetch every 3 seconds if there are active jobs
-            const data = query.state.data as PaginatedJobs | undefined
-            const hasActiveJobs = data?.items.some((job) => job.isActive) ?? false
-            return hasActiveJobs ? 3000 : false
-        },
     })
 }
 
 /**
  * Hook to fetch a specific job by ID
- * Auto-refetches every 2 seconds if job is active
+ * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
  */
 export function useJob(jobId: number | null) {
     const { status } = useSession()
@@ -73,17 +67,12 @@ export function useJob(jobId: number | null) {
         },
         enabled: status === 'authenticated' && !!jobId,
         staleTime: 2 * 1000, // 2 seconds - job details update frequently
-        refetchInterval: (query) => {
-            // Auto-refetch every 2 seconds if job is active
-            const data = query.state.data as Job | undefined
-            return data?.isActive ? 2000 : false
-        },
     })
 }
 
 /**
  * Hook to fetch job statistics
- * Auto-refetches every 10 seconds if there are active jobs
+ * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
  */
 export function useJobStatistics() {
     const { status } = useSession()
@@ -97,11 +86,6 @@ export function useJobStatistics() {
         },
         enabled: status === 'authenticated',
         staleTime: 10 * 1000, // 10 seconds
-        refetchInterval: (query) => {
-            // Auto-refetch every 10 seconds if there are active jobs
-            const data = query.state.data as JobStatistics | undefined
-            return (data?.activeJobs ?? 0) > 0 ? 10000 : false
-        },
     })
 }
 

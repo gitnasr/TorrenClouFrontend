@@ -25,57 +25,101 @@ import {
     AlertCircle,
     Loader2,
     Files,
+    Cloud,
+    RefreshCw,
 } from 'lucide-react'
 
-const statusConfig: Record<string, {
+const statusConfig: Record<JobStatus, {
     icon: React.ReactNode
     label: string
     color: string
     bgColor: string
 }> = {
-    QUEUED: {
+    [JobStatus.QUEUED]: {
         icon: <Clock className="h-5 w-5" />,
         label: 'Queued',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
-    DOWNLOADING: {
+    [JobStatus.DOWNLOADING]: {
         icon: <Download className="h-5 w-5" />,
         label: 'Downloading',
         color: 'text-primary',
         bgColor: 'bg-primary/20',
     },
-    PENDING_UPLOAD: {
+    [JobStatus.SYNCING]: {
+        icon: <Cloud className="h-5 w-5" />,
+        label: 'Syncing to storage',
+        color: 'text-info',
+        bgColor: 'bg-info/20',
+    },
+    [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-5 w-5" />,
         label: 'Pending Upload',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
-    UPLOADING: {
+    [JobStatus.UPLOADING]: {
         icon: <Upload className="h-5 w-5" />,
         label: 'Uploading',
         color: 'text-info',
         bgColor: 'bg-info/20',
     },
-    RETRYING: {
+    [JobStatus.RETRYING]: {
         icon: <Activity className="h-5 w-5" />,
         label: 'Retrying',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
-    COMPLETED: {
+    [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        label: 'Retrying download',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
+    [JobStatus.UPLOAD_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        label: 'Retrying upload',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
+    [JobStatus.SYNC_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        label: 'Retrying sync',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
+    [JobStatus.COMPLETED]: {
         icon: <CheckCircle className="h-5 w-5" />,
         label: 'Completed',
         color: 'text-success',
         bgColor: 'bg-success/20',
     },
-    FAILED: {
+    [JobStatus.FAILED]: {
         icon: <XCircle className="h-5 w-5" />,
         label: 'Failed',
         color: 'text-danger',
         bgColor: 'bg-danger/20',
     },
-    CANCELLED: {
+    [JobStatus.TORRENT_FAILED]: {
+        icon: <XCircle className="h-5 w-5" />,
+        label: 'Download failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
+    [JobStatus.UPLOAD_FAILED]: {
+        icon: <XCircle className="h-5 w-5" />,
+        label: 'Upload failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
+    [JobStatus.GOOGLE_DRIVE_FAILED]: {
+        icon: <AlertCircle className="h-5 w-5" />,
+        label: 'Google Drive upload failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
+    [JobStatus.CANCELLED]: {
         icon: <Ban className="h-5 w-5" />,
         label: 'Cancelled',
         color: 'text-muted-foreground',
@@ -141,7 +185,7 @@ export function JobDetail() {
         )
     }
 
-    const config = statusConfig[job.status] || statusConfig.QUEUED
+    const config = statusConfig[job.status] || statusConfig[JobStatus.QUEUED]
 
     return (
         <Card className="h-full">

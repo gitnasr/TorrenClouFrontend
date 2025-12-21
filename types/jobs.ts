@@ -7,18 +7,62 @@ import type { UserJob } from './api'
 // Zod Schemas
 // ============================================
 
-export const jobStatusSchema = z.enum([
+// Map of numeric enum values to string values (matching backend enum order)
+const jobStatusNumberMap: Record<number, string> = {
+    0: 'QUEUED',
+    1: 'DOWNLOADING',
+    2: 'SYNCING',
+    3: 'PENDING_UPLOAD',
+    4: 'UPLOADING',
+    5: 'RETRYING',
+    6: 'TORRENT_DOWNLOAD_RETRY',
+    7: 'UPLOAD_RETRY',
+    8: 'SYNC_RETRY',
+    9: 'COMPLETED',
+    10: 'FAILED',
+    11: 'CANCELLED',
+    12: 'TORRENT_FAILED',
+    13: 'UPLOAD_FAILED',
+    14: 'GOOGLE_DRIVE_FAILED',
+}
+
+const validStatusStrings = [
     'QUEUED',
     'DOWNLOADING',
+    'SYNCING',
     'PENDING_UPLOAD',
     'UPLOADING',
     'RETRYING',
+    'TORRENT_DOWNLOAD_RETRY',
+    'UPLOAD_RETRY',
+    'SYNC_RETRY',
     'COMPLETED',
     'FAILED',
     'CANCELLED',
-])
+    'TORRENT_FAILED',
+    'UPLOAD_FAILED',
+    'GOOGLE_DRIVE_FAILED',
+] as const
 
-export const jobTypeSchema = z.enum(['Torrent', 'Other'])
+// Schema that accepts both numeric enum values and string values
+export const jobStatusSchema = z.preprocess(
+    (val) => {
+        // If it's a number, convert to string using the map
+        if (typeof val === 'number') {
+            return jobStatusNumberMap[val] ?? val
+        }
+        // If it's a string that represents a number, convert it
+        if (typeof val === 'string' && /^\d+$/.test(val)) {
+            const numVal = parseInt(val, 10)
+            return jobStatusNumberMap[numVal] ?? val
+        }
+        // If it's already a string, return as-is
+        return val
+    },
+    z.enum(validStatusStrings)
+)
+
+export const jobTypeSchema = z.enum(['Torrent', 'Sync'])
 
 export const jobSchema = z.object({
     id: z.number().int().positive(),
@@ -30,14 +74,15 @@ export const jobSchema = z.object({
     requestFileName: z.string().nullable(),
     errorMessage: z.string().nullable(),
     currentState: z.string().nullable(),
-    startedAt: z.string().nullable(),
-    completedAt: z.string().nullable(),
-    lastHeartbeat: z.string().nullable(),
+    // Admin-only: Last heartbeat from worker processing the job
+    lastHeartbeat: z.string().datetime().nullable().optional(),
     bytesDownloaded: z.number().int().nonnegative(),
     totalBytes: z.number().int().nonnegative(),
     selectedFileIndices: z.array(z.number().int().nonnegative()),
-    createdAt: z.string(),
-    updatedAt: z.string().nullable(),
+    createdAt: z.string().datetime(),
+    updatedAt: z.string().datetime().nullable().optional(),
+    startedAt: z.string().datetime().nullable().optional(),
+    completedAt: z.string().datetime().nullable().optional(),
     progressPercentage: z.number().min(0).max(100),
     isActive: z.boolean(),
 })
@@ -57,6 +102,7 @@ export const jobStatisticsSchema = z.object({
     activeJobs: z.number().int().nonnegative(),
     completedJobs: z.number().int().nonnegative(),
     failedJobs: z.number().int().nonnegative(),
+    downloadingJobs: z.number().int().nonnegative().optional(),
 })
 
 export const jobsQueryParamsSchema = z.object({
@@ -77,7 +123,7 @@ export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 export interface JobsQueryParams {
     pageNumber?: number
     pageSize?: number
-    status?: 'QUEUED' | 'DOWNLOADING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'RETRYING' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | null
+    status?: 'QUEUED' | 'DOWNLOADING' | 'SYNCING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'RETRYING' | 'TORRENT_DOWNLOAD_RETRY' | 'UPLOAD_RETRY' | 'SYNC_RETRY' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'TORRENT_FAILED' | 'UPLOAD_FAILED' | 'GOOGLE_DRIVE_FAILED' | null
 }
 
 // ============================================
@@ -122,12 +168,19 @@ export interface JobsPaginationProps {
 export const statusLabels: Record<JobStatus, string> = {
     [JobStatus.QUEUED]: 'Queued',
     [JobStatus.DOWNLOADING]: 'Downloading',
+    [JobStatus.SYNCING]: 'Syncing to storage',
     [JobStatus.PENDING_UPLOAD]: 'Pending Upload',
     [JobStatus.UPLOADING]: 'Uploading',
     [JobStatus.RETRYING]: 'Retrying',
+    [JobStatus.TORRENT_DOWNLOAD_RETRY]: 'Retrying download',
+    [JobStatus.UPLOAD_RETRY]: 'Retrying upload',
+    [JobStatus.SYNC_RETRY]: 'Retrying sync',
     [JobStatus.COMPLETED]: 'Completed',
     [JobStatus.FAILED]: 'Failed',
     [JobStatus.CANCELLED]: 'Cancelled',
+    [JobStatus.TORRENT_FAILED]: 'Download failed',
+    [JobStatus.UPLOAD_FAILED]: 'Upload failed',
+    [JobStatus.GOOGLE_DRIVE_FAILED]: 'Google Drive upload failed',
 }
 
 // ============================================

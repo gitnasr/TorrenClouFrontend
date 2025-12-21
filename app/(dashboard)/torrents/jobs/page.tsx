@@ -1,7 +1,8 @@
 'use client'
 
-import { Suspense } from 'react'
+import { Suspense, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,23 +12,45 @@ import { Pagination } from '@/components/ui/pagination'
 import { Upload, Search, TrendingUp, CheckCircle, XCircle, Clock, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
 import { useJobs } from '@/hooks/useJobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import { JobStatus } from '@/types/enums'
+import { JobStatus, UserRole } from '@/types/enums'
+import { filterJobsForUser, isStatusVisibleToUser } from '@/lib/utils/jobFilters'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 import type { UserJob } from '@/types/api'
 import type { Job } from '@/types/jobs'
 
-const statusFilters = [
-    { label: 'All', value: 'all' },
-    { label: 'Queued', value: JobStatus.QUEUED },
-    { label: 'Downloading', value: JobStatus.DOWNLOADING },
-    { label: 'Pending Upload', value: JobStatus.PENDING_UPLOAD },
-    { label: 'Uploading', value: JobStatus.UPLOADING },
-    { label: 'Retrying', value: JobStatus.RETRYING },
-    { label: 'Completed', value: JobStatus.COMPLETED },
-    { label: 'Failed', value: JobStatus.FAILED },
-]
+// Get status filters based on user role
+function getStatusFilters(userRole?: UserRole) {
+    const allFilters = [
+        { label: 'All', value: 'all' },
+        { label: 'Queued', value: JobStatus.QUEUED },
+        { label: 'Downloading', value: JobStatus.DOWNLOADING },
+        { label: 'Syncing', value: JobStatus.SYNCING },
+        { label: 'Pending Upload', value: JobStatus.PENDING_UPLOAD },
+        { label: 'Uploading', value: JobStatus.UPLOADING },
+        { label: 'Retrying', value: JobStatus.RETRYING },
+        { label: 'Retrying Download', value: JobStatus.TORRENT_DOWNLOAD_RETRY },
+        { label: 'Retrying Upload', value: JobStatus.UPLOAD_RETRY },
+        { label: 'Retrying Sync', value: JobStatus.SYNC_RETRY },
+        { label: 'Completed', value: JobStatus.COMPLETED },
+        { label: 'Failed', value: JobStatus.FAILED },
+        { label: 'Download Failed', value: JobStatus.TORRENT_FAILED },
+        { label: 'Upload Failed', value: JobStatus.UPLOAD_FAILED },
+        { label: 'Google Drive Failed', value: JobStatus.GOOGLE_DRIVE_FAILED },
+    ]
+    
+    // Admin and Support see all filters
+    if (userRole === UserRole.Admin || userRole === UserRole.Support) {
+        return allFilters
+    }
+    
+    // Regular users: filter out admin-only statuses
+    return allFilters.filter((filter) => {
+        if (filter.value === 'all') return true
+        return isStatusVisibleToUser(filter.value as JobStatus, userRole)
+    })
+}
 
 // Adapter function to convert Job to UserJob format for JobCard
 function toUserJob(job: Job): UserJob {
@@ -47,8 +70,10 @@ function toUserJob(job: Job): UserJob {
         totalBytes: job.totalBytes,
         selectedFileIndices: job.selectedFileIndices,
         progress: job.progressPercentage,
+        // Use requestFileName as primary identifier (fallback to job ID)
         fileName: job.requestFileName ?? undefined,
         storageProfileName: job.storageProfileName ?? undefined,
+        createdAt: job.createdAt,
     }
 }
 
@@ -56,6 +81,7 @@ function JobsListContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
+    const { data: session } = useSession()
 
     // Zustand store for filters and pagination
     const {
@@ -70,6 +96,17 @@ function JobsListContent() {
 
     // React Query hook for fetching jobs
     const { data, isLoading, error, refetch } = useJobs()
+
+    // Filter jobs based on user role
+    const filteredJobs = useMemo(() => {
+        if (!data?.items) return []
+        return filterJobsForUser(data.items, session?.user?.role as UserRole | undefined)
+    }, [data?.items, session?.user?.role])
+
+    // Get status filters based on user role
+    const statusFilters = useMemo(() => {
+        return getStatusFilters(session?.user?.role as UserRole | undefined)
+    }, [session?.user?.role])
 
     // Sync URL params with store on mount
     useEffect(() => {
@@ -126,27 +163,47 @@ function JobsListContent() {
         updateFilters({ size, page: 1 })
     }
 
-    // Calculate stats from data
-    const stats = data ? {
-        total: data.totalCount,
-        active: data.items.filter((j) =>
-            ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'RETRYING'].includes(j.status)
-        ).length,
-        completed: data.items.filter((j) => j.status === 'COMPLETED').length,
-        failed: data.items.filter((j) => j.status === 'FAILED').length,
-    } : {
-        total: 0,
-        active: 0,
-        completed: 0,
-        failed: 0,
-    }
+    // Calculate stats from filtered jobs
+    const stats = useMemo(() => {
+        if (!filteredJobs.length) {
+            return {
+                total: 0,
+                active: 0,
+                completed: 0,
+                failed: 0,
+            }
+        }
+        
+        return {
+            total: filteredJobs.length,
+            active: filteredJobs.filter((j) =>
+                j.status === JobStatus.QUEUED ||
+                j.status === JobStatus.DOWNLOADING ||
+                j.status === JobStatus.SYNCING ||
+                j.status === JobStatus.PENDING_UPLOAD ||
+                j.status === JobStatus.UPLOADING ||
+                j.status === JobStatus.TORRENT_DOWNLOAD_RETRY ||
+                j.status === JobStatus.UPLOAD_RETRY ||
+                j.status === JobStatus.SYNC_RETRY
+            ).length,
+            completed: filteredJobs.filter((j) => j.status === JobStatus.COMPLETED).length,
+            failed: filteredJobs.filter((j) =>
+                j.status === JobStatus.FAILED ||
+                j.status === JobStatus.TORRENT_FAILED ||
+                j.status === JobStatus.UPLOAD_FAILED ||
+                j.status === JobStatus.GOOGLE_DRIVE_FAILED
+            ).length,
+        }
+    }, [filteredJobs])
 
     // Filter by search (client-side since API may not support search)
-    const filteredItems = data?.items.filter((job) => {
-        const matchesSearch = !search ||
-            job.requestFileName?.toLowerCase().includes(search.toLowerCase())
-        return matchesSearch
-    }) ?? []
+    const filteredItems = useMemo(() => {
+        return filteredJobs.filter((job) => {
+            const matchesSearch = !search ||
+                job.requestFileName?.toLowerCase().includes(search.toLowerCase())
+            return matchesSearch
+        })
+    }, [filteredJobs, search])
 
     // Loading state
     if (isLoading) {

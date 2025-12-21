@@ -18,7 +18,9 @@ import {
     FolderOpen,
     HardDrive,
     FileText,
-    RefreshCw
+    RefreshCw,
+    Cloud,
+    AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
@@ -47,6 +49,13 @@ const statusConfig: Record<JobStatus, {
         color: 'text-primary',
         bgColor: 'bg-primary/20',
     },
+    [JobStatus.SYNCING]: {
+        icon: <Cloud className="h-5 w-5" />,
+        badgeVariant: 'secondary',
+        label: 'Syncing to storage',
+        color: 'text-info',
+        bgColor: 'bg-info/20',
+    },
     [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-5 w-5" />,
         badgeVariant: 'pending',
@@ -68,6 +77,27 @@ const statusConfig: Record<JobStatus, {
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
+    [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        badgeVariant: 'processing',
+        label: 'Retrying download',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
+    [JobStatus.UPLOAD_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        badgeVariant: 'processing',
+        label: 'Retrying upload',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
+    [JobStatus.SYNC_RETRY]: {
+        icon: <RefreshCw className="h-5 w-5" />,
+        badgeVariant: 'processing',
+        label: 'Retrying sync',
+        color: 'text-warning',
+        bgColor: 'bg-warning/20',
+    },
     [JobStatus.COMPLETED]: {
         icon: <CheckCircle className="h-5 w-5" />,
         badgeVariant: 'success',
@@ -82,6 +112,27 @@ const statusConfig: Record<JobStatus, {
         color: 'text-danger',
         bgColor: 'bg-danger/20',
     },
+    [JobStatus.TORRENT_FAILED]: {
+        icon: <XCircle className="h-5 w-5" />,
+        badgeVariant: 'destructive',
+        label: 'Download failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
+    [JobStatus.UPLOAD_FAILED]: {
+        icon: <XCircle className="h-5 w-5" />,
+        badgeVariant: 'destructive',
+        label: 'Upload failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
+    [JobStatus.GOOGLE_DRIVE_FAILED]: {
+        icon: <AlertCircle className="h-5 w-5" />,
+        badgeVariant: 'destructive',
+        label: 'Google Drive upload failed',
+        color: 'text-danger',
+        bgColor: 'bg-danger/20',
+    },
     [JobStatus.CANCELLED]: {
         icon: <Ban className="h-5 w-5" />,
         badgeVariant: 'secondary',
@@ -93,7 +144,16 @@ const statusConfig: Record<JobStatus, {
 
 export function JobCard({ job, className }: JobCardProps) {
     const config = statusConfig[job.status]
-    const isActive = [JobStatus.QUEUED, JobStatus.DOWNLOADING, JobStatus.PENDING_UPLOAD, JobStatus.UPLOADING, JobStatus.RETRYING].includes(job.status)
+    const isActive = [
+        JobStatus.QUEUED,
+        JobStatus.DOWNLOADING,
+        JobStatus.SYNCING,
+        JobStatus.PENDING_UPLOAD,
+        JobStatus.UPLOADING,
+        JobStatus.TORRENT_DOWNLOAD_RETRY,
+        JobStatus.UPLOAD_RETRY,
+        JobStatus.SYNC_RETRY
+    ].includes(job.status)
 
     return (
         <Link href={`/torrents/jobs/${job.id}`}>
@@ -108,7 +168,10 @@ export function JobCard({ job, className }: JobCardProps) {
                     'absolute left-0 top-0 bottom-0 w-1',
                     isActive && 'bg-info',
                     job.status === JobStatus.COMPLETED && 'bg-success',
-                    job.status === JobStatus.FAILED && 'bg-danger',
+                    (job.status === JobStatus.FAILED || 
+                     job.status === JobStatus.TORRENT_FAILED || 
+                     job.status === JobStatus.UPLOAD_FAILED || 
+                     job.status === JobStatus.GOOGLE_DRIVE_FAILED) && 'bg-danger',
                     job.status === JobStatus.CANCELLED && 'bg-surface-200'
                 )} />
 
@@ -134,19 +197,27 @@ export function JobCard({ job, className }: JobCardProps) {
                                     <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
                                         {job.fileName || `Job #${job.id}`}
                                     </h3>
-                                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                                         <span className="flex items-center gap-1">
                                             <FileText className="h-3.5 w-3.5" />
                                             {formatFileSize(job.totalBytes)}
                                         </span>
+                                        {job.selectedFileIndices.length > 0 && (
+                                            <span className="flex items-center gap-1">
+                                                {job.selectedFileIndices.length} file{job.selectedFileIndices.length > 1 ? 's' : ''}
+                                            </span>
+                                        )}
                                         <span className="flex items-center gap-1">
                                             <HardDrive className="h-3.5 w-3.5" />
-                                            {job.storageProfileName}
+                                            {job.storageProfileName || 'Unknown'}
                                         </span>
                                         <span>
-                                            {formatRelativeTime(job.startedAt || new Date().toISOString())}
+                                            {formatRelativeTime(job.createdAt || job.startedAt || new Date().toISOString())}
                                         </span>
                                     </div>
+                                    {job.currentState && (
+                                        <p className="text-sm text-muted-foreground mt-1">{job.currentState}</p>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Badge variant={config.badgeVariant}>{config.label}</Badge>

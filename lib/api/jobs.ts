@@ -34,7 +34,14 @@ export async function getJobs(params: JobsQueryParams = {}): Promise<PaginatedJo
 
     const url = `/jobs${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
     const response = await apiClient.get<PaginatedJobs>(url)
-    return paginatedJobsSchema.parse(response.data)
+    
+    try {
+        return paginatedJobsSchema.parse(response.data)
+    } catch (error) {
+        // Log validation errors for debugging
+        console.error('Job list validation error:', error)
+        throw new Error('Invalid job data received from server. Please try again later.')
+    }
 }
 
 /**
@@ -42,7 +49,14 @@ export async function getJobs(params: JobsQueryParams = {}): Promise<PaginatedJo
  */
 export async function getJob(jobId: number): Promise<Job> {
     const response = await apiClient.get<Job>(`/jobs/${jobId}`)
-    return jobSchema.parse(response.data)
+    
+    try {
+        return jobSchema.parse(response.data)
+    } catch (error) {
+        // Log validation errors for debugging
+        console.error('Job detail validation error:', error)
+        throw new Error('Invalid job data received from server. Please try again later.')
+    }
 }
 
 /**
@@ -50,6 +64,13 @@ export async function getJob(jobId: number): Promise<Job> {
  */
 export async function getJobStatistics(): Promise<JobStatistics> {
     const response = await apiClient.get<JobStatistics>('/jobs/statistics')
-    return jobStatisticsSchema.parse(response.data)
+    
+    try {
+        return jobStatisticsSchema.parse(response.data)
+    } catch (error) {
+        // Log validation errors for debugging
+        console.error('Job statistics validation error:', error)
+        throw new Error('Invalid statistics data received from server. Please try again later.')
+    }
 }
 

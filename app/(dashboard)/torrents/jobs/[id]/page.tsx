@@ -15,7 +15,8 @@ import {
     FileText,
     RefreshCcw,
     AlertCircle,
-    Loader2
+    Loader2,
+    Cloud
 } from 'lucide-react'
 import { formatFileSize, formatDateTime, formatRelativeTime } from '@/lib/utils/formatters'
 import {
@@ -25,60 +26,103 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { useJob } from '@/hooks/useJobs'
-import { JobStatus } from '@/types/enums'
+import { JobStatus, UserRole } from '@/types/enums'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useParams } from 'next/navigation'
 
-const statusConfig: Record<string, {
+const statusConfig: Record<JobStatus, {
     icon: React.ReactNode
     badgeVariant: 'default' | 'secondary' | 'destructive' | 'warning' | 'processing' | 'pending'
     label: string
     color: string
 }> = {
-    QUEUED: {
+    [JobStatus.QUEUED]: {
         icon: <Clock className="h-6 w-6" />,
         badgeVariant: 'pending',
         label: 'Queued',
         color: 'text-warning',
     },
-    DOWNLOADING: {
+    [JobStatus.DOWNLOADING]: {
         icon: <Download className="h-6 w-6" />,
         badgeVariant: 'processing',
         label: 'Downloading',
         color: 'text-teal-primary',
     },
-    PENDING_UPLOAD: {
+    [JobStatus.SYNCING]: {
+        icon: <Cloud className="h-6 w-6" />,
+        badgeVariant: 'secondary',
+        label: 'Syncing to storage',
+        color: 'text-teal-secondary',
+    },
+    [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-6 w-6" />,
         badgeVariant: 'pending',
         label: 'Pending Upload',
         color: 'text-warning',
     },
-    UPLOADING: {
+    [JobStatus.UPLOADING]: {
         icon: <Upload className="h-6 w-6" />,
         badgeVariant: 'secondary',
         label: 'Uploading',
         color: 'text-teal-secondary',
     },
-    RETRYING: {
+    [JobStatus.RETRYING]: {
         icon: <RefreshCcw className="h-6 w-6" />,
         badgeVariant: 'processing',
         label: 'Retrying',
         color: 'text-warning',
     },
-    COMPLETED: {
+    [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
+        icon: <RefreshCcw className="h-6 w-6" />,
+        badgeVariant: 'processing',
+        label: 'Retrying download',
+        color: 'text-warning',
+    },
+    [JobStatus.UPLOAD_RETRY]: {
+        icon: <RefreshCcw className="h-6 w-6" />,
+        badgeVariant: 'processing',
+        label: 'Retrying upload',
+        color: 'text-warning',
+    },
+    [JobStatus.SYNC_RETRY]: {
+        icon: <RefreshCcw className="h-6 w-6" />,
+        badgeVariant: 'processing',
+        label: 'Retrying sync',
+        color: 'text-warning',
+    },
+    [JobStatus.COMPLETED]: {
         icon: <CheckCircle className="h-6 w-6" />,
         badgeVariant: 'default',
         label: 'Completed',
         color: 'text-teal-secondary',
     },
-    FAILED: {
+    [JobStatus.FAILED]: {
         icon: <XCircle className="h-6 w-6" />,
         badgeVariant: 'destructive',
         label: 'Failed',
         color: 'text-orange',
     },
-    CANCELLED: {
+    [JobStatus.TORRENT_FAILED]: {
+        icon: <XCircle className="h-6 w-6" />,
+        badgeVariant: 'destructive',
+        label: 'Download failed',
+        color: 'text-orange',
+    },
+    [JobStatus.UPLOAD_FAILED]: {
+        icon: <XCircle className="h-6 w-6" />,
+        badgeVariant: 'destructive',
+        label: 'Upload failed',
+        color: 'text-orange',
+    },
+    [JobStatus.GOOGLE_DRIVE_FAILED]: {
+        icon: <AlertCircle className="h-6 w-6" />,
+        badgeVariant: 'destructive',
+        label: 'Google Drive upload failed',
+        color: 'text-orange',
+    },
+    [JobStatus.CANCELLED]: {
         icon: <XCircle className="h-6 w-6" />,
         badgeVariant: 'secondary',
         label: 'Cancelled',
@@ -130,6 +174,7 @@ function TimelineItem({
 export default function JobDetailsPage() {
     const params = useParams()
     const jobId = Number(params.id)
+    const { data: session } = useSession()
 
     // Use React Query hook to fetch job details
     const { data: job, isLoading, error, refetch } = useJob(jobId)
@@ -176,8 +221,17 @@ export default function JobDetailsPage() {
         )
     }
 
-    const config = statusConfig[job.status] || statusConfig.QUEUED
-    const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'RETRYING'].includes(job.status)
+    const config = statusConfig[job.status as JobStatus] || statusConfig[JobStatus.QUEUED]
+    const isActive = [
+        JobStatus.QUEUED,
+        JobStatus.DOWNLOADING,
+        JobStatus.SYNCING,
+        JobStatus.PENDING_UPLOAD,
+        JobStatus.UPLOADING,
+        JobStatus.TORRENT_DOWNLOAD_RETRY,
+        JobStatus.UPLOAD_RETRY,
+        JobStatus.SYNC_RETRY
+    ].includes(job.status as JobStatus)
 
     return (
         <div className="space-y-6">
@@ -196,10 +250,15 @@ export default function JobDetailsPage() {
                 <div className="space-y-1">
                     <h1 className="text-2xl font-bold">{job.requestFileName || `Job #${job.id}`}</h1>
                     <p className="text-muted-foreground">Job #{job.id}</p>
+                    {job.currentState && (
+                        <p className="text-sm text-muted-foreground mt-1">{job.currentState}</p>
+                    )}
                 </div>
-                <Badge variant={config.badgeVariant} className="text-sm">
-                    {config.label}
-                </Badge>
+                <div className="flex flex-col items-end gap-2">
+                    <Badge variant={config.badgeVariant} className="text-sm">
+                        {config.label}
+                    </Badge>
+                </div>
             </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
@@ -233,7 +292,10 @@ export default function JobDetailsPage() {
                     )}
 
                     {/* Error Card (for failed jobs) */}
-                    {job.status === 'FAILED' && job.errorMessage && (
+                    {(job.status === JobStatus.FAILED || 
+                      job.status === JobStatus.TORRENT_FAILED || 
+                      job.status === JobStatus.UPLOAD_FAILED || 
+                      job.status === JobStatus.GOOGLE_DRIVE_FAILED) && job.errorMessage && (
                         <Card className="border-orange/50 bg-orange/5">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-orange">
@@ -257,7 +319,7 @@ export default function JobDetailsPage() {
                     )}
 
                     {/* Success Card (for completed jobs) */}
-                    {job.status === 'COMPLETED' && (
+                    {job.status === JobStatus.COMPLETED && (
                         <Card className="border-teal-secondary/50 bg-teal-secondary/5">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-teal-secondary">
@@ -295,6 +357,10 @@ export default function JobDetailsPage() {
                                     <p className="font-medium">{config.label}</p>
                                 </div>
                                 <div>
+                                    <p className="text-sm text-muted-foreground">Request File Name</p>
+                                    <p className="font-medium">{job.requestFileName || 'N/A'}</p>
+                                </div>
+                                <div>
                                     <p className="text-sm text-muted-foreground">Total Size</p>
                                     <p className="font-medium">{formatFileSize(job.totalBytes)}</p>
                                 </div>
@@ -303,19 +369,22 @@ export default function JobDetailsPage() {
                                     <p className="font-medium">
                                         {job.selectedFileIndices.length === 0
                                             ? 'All files'
-                                            : `${job.selectedFileIndices.length} files`}
+                                            : `${job.selectedFileIndices.length} file${job.selectedFileIndices.length > 1 ? 's' : ''}`}
                                     </p>
+                                    {job.selectedFileIndices.length > 0 && job.selectedFileIndices.length <= 10 && (
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            Indices: {job.selectedFileIndices.join(', ')}
+                                        </p>
+                                    )}
                                 </div>
-                                {job.startedAt && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Started</p>
-                                        <p className="font-medium">{formatDateTime(job.startedAt)}</p>
-                                    </div>
-                                )}
-                                {job.completedAt && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Completed</p>
-                                        <p className="font-medium">{formatDateTime(job.completedAt)}</p>
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Storage Profile</p>
+                                    <p className="font-medium">{job.storageProfileName || 'Unknown'}</p>
+                                </div>
+                                {job.currentState && (
+                                    <div className="sm:col-span-2">
+                                        <p className="text-sm text-muted-foreground">Current State</p>
+                                        <p className="font-medium">{job.currentState}</p>
                                     </div>
                                 )}
                             </div>
@@ -351,14 +420,21 @@ export default function JobDetailsPage() {
                                     label="Created"
                                     date={job.createdAt}
                                 />
-                                {job.status !== 'QUEUED' && job.startedAt && (
+                                {job.status !== JobStatus.QUEUED && job.startedAt && (
                                     <TimelineItem
                                         step={2}
                                         label="Started Processing"
                                         date={job.startedAt}
                                     />
                                 )}
-                                {job.status === 'COMPLETED' && job.completedAt && (
+                                {job.updatedAt && (
+                                    <TimelineItem
+                                        step={3}
+                                        label="Last Updated"
+                                        date={job.updatedAt}
+                                    />
+                                )}
+                                {job.status === JobStatus.COMPLETED && job.completedAt && (
                                     <TimelineItem
                                         step="✓"
                                         label="Completed"
@@ -369,6 +445,47 @@ export default function JobDetailsPage() {
                             </div>
                         </CardContent>
                     </Card>
+
+                    {/* Admin-Only Information */}
+                    {session?.user?.role === UserRole.Admin && (
+                        <Card className="border-warning/50">
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <AlertCircle className="h-4 w-4" />
+                                    Admin Information
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {job.lastHeartbeat && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Last Heartbeat</p>
+                                        <TooltipProvider delayDuration={100}>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <p className="text-sm font-medium cursor-help">
+                                                        {formatRelativeTime(job.lastHeartbeat)}
+                                                    </p>
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>{formatDateTime(job.lastHeartbeat)}</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </div>
+                                )}
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Job Type</p>
+                                    <p className="text-sm font-medium">{job.type}</p>
+                                </div>
+                                {job.currentState && (
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Internal State</p>
+                                        <p className="text-sm font-medium">{job.currentState}</p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
                 </div>
             </div>
         </div>
