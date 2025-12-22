@@ -160,9 +160,9 @@ function PendingInvoiceView({ invoice }: { invoice: Invoice }) {
                                 <>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                            Size ({pricingDetails.totalSizeInGb.toFixed(2)} GB × ${pricingDetails.baseRatePerGb}/GB)
+                                            Size ({pricingDetails.calculatedSizeInGb.toFixed(2)} GB × ${pricingDetails.baseRatePerGb}/GB)
                                         </span>
-                                        <span>{formatCurrency(pricingDetails.totalSizeInGb * pricingDetails.baseRatePerGb, 'USD')}</span>
+                                        <span>{formatCurrency(pricingDetails.calculatedSizeInGb * pricingDetails.baseRatePerGb, 'USD')}</span>
                                     </div>
                                     {pricingDetails.regionMultiplier !== 1 && (
                                         <div className="flex justify-between text-sm">

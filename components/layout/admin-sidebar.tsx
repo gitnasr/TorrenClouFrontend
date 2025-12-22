@@ -11,7 +11,8 @@ import {
     Tag,
     Settings,
     Shield,
-    FileText
+    FileText,
+    Cloud,
 } from 'lucide-react'
 
 const adminNavigation = [
@@ -20,6 +21,7 @@ const adminNavigation = [
     { name: 'Deposits', href: '/admin/deposits', icon: Receipt },
     { name: 'Wallets', href: '/admin/wallets', icon: Wallet },
     { name: 'Vouchers', href: '/admin/vouchers', icon: Tag },
+    { name: 'Sync Jobs', href: '/admin/sync-jobs', icon: Cloud },
 ]
 
 export function AdminSidebar() {

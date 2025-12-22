@@ -143,8 +143,8 @@ export interface TorrentAnalysis {
 
 export interface PricingSnapshot {
   totalSizeInBytes: number
-  totalSizeInGb: number
-  selectedFiles: number[]
+  calculatedSizeInGb: number
+  selectedFiles: string[]
   baseRatePerGb: number
   userRegion: string
   regionMultiplier: number
@@ -156,7 +156,8 @@ export interface PricingSnapshot {
 }
 
 export interface QuoteRequest {
-  selectedFileIndices: number[]
+  selectedFilePaths: string[]
+  storageProfileId: number
   torrentFile: File
   voucherCode?: string
 }
@@ -256,7 +257,7 @@ export interface UserJob {
   lastHeartbeat?: string
   bytesDownloaded: number
   totalBytes: number
-  selectedFileIndices: number[]
+  selectedFilePaths: string[]
   progress: number
   // Display fields
   fileName?: string

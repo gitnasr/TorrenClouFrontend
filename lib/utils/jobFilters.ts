@@ -18,11 +18,8 @@ export function isStatusVisibleToUser(
         return true
     }
 
-    // Regular users cannot see internal sync stages
-    if (status === JobStatus.SYNCING || status === JobStatus.SYNC_RETRY) {
-        return false
-    }
-
+    // All job statuses are now visible to regular users
+    // Sync jobs are handled separately by their own system
     return true
 }
 

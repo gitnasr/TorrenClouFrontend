@@ -49,13 +49,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-primary',
         bgColor: 'bg-primary/20',
     },
-    [JobStatus.SYNCING]: {
-        icon: <Cloud className="h-5 w-5" />,
-        badgeVariant: 'secondary',
-        label: 'Syncing to storage',
-        color: 'text-info',
-        bgColor: 'bg-info/20',
-    },
     [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-5 w-5" />,
         badgeVariant: 'pending',
@@ -70,13 +63,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-info',
         bgColor: 'bg-info/20',
     },
-    [JobStatus.RETRYING]: {
-        icon: <RefreshCw className="h-5 w-5" />,
-        badgeVariant: 'processing',
-        label: 'Retrying',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
     [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
         icon: <RefreshCw className="h-5 w-5" />,
         badgeVariant: 'processing',
@@ -88,13 +74,6 @@ const statusConfig: Record<JobStatus, {
         icon: <RefreshCw className="h-5 w-5" />,
         badgeVariant: 'processing',
         label: 'Retrying upload',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
-    [JobStatus.SYNC_RETRY]: {
-        icon: <RefreshCw className="h-5 w-5" />,
-        badgeVariant: 'processing',
-        label: 'Retrying sync',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
@@ -159,10 +138,10 @@ function JobItemCard({ job, isSelected, onSelect }: JobItemCardProps) {
                 'group cursor-pointer transition-all duration-200 hover:shadow-lg hover:border-primary/50',
                 isActive && 'border-l-4 border-l-primary',
                 job.status === JobStatus.COMPLETED && 'border-l-4 border-l-success',
-                (job.status === JobStatus.FAILED || 
-                 job.status === JobStatus.TORRENT_FAILED || 
-                 job.status === JobStatus.UPLOAD_FAILED || 
-                 job.status === JobStatus.GOOGLE_DRIVE_FAILED) && 'border-l-4 border-l-danger',
+                (job.status === JobStatus.FAILED ||
+                    job.status === JobStatus.TORRENT_FAILED ||
+                    job.status === JobStatus.UPLOAD_FAILED ||
+                    job.status === JobStatus.GOOGLE_DRIVE_FAILED) && 'border-l-4 border-l-danger',
                 isSelected && 'ring-2 ring-primary bg-primary/5'
             )}
         >

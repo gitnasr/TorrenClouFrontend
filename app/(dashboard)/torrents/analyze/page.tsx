@@ -18,6 +18,7 @@ import {
     Zap,
     Clock,
     AlertCircle,
+    Cloud,
 } from 'lucide-react'
 import { formatFileSize, formatInfoHash, formatCurrency, calculateTorrentHealth, getTimeRemaining } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
@@ -35,6 +36,7 @@ import {
 import { useTorrentStore } from '@/stores/torrentStore'
 import { useTorrentQuote } from '@/hooks/useTorrents'
 import { useWalletBalance, useInvoicePayment } from '@/hooks/usePayments'
+import { StorageProfileSelector } from '@/components/storage'
 
 export default function TorrentAnalyzePage() {
     const router = useRouter()
@@ -46,11 +48,12 @@ export default function TorrentAnalyzePage() {
     // Zustand store
     const {
         analysisResult,
-        selectedFileIndices,
+        selectedFilePaths,
         quoteResult,
         toggleFileSelection,
         selectAllFiles,
         deselectAllFiles,
+        selectedStorageProfileId,
     } = useTorrentStore()
 
     // API hooks
@@ -78,7 +81,7 @@ export default function TorrentAnalyzePage() {
 
     // Calculate selected size
     const selectedSize = analysisResult.files
-        .filter((f) => selectedFileIndices.includes(f.index))
+        .filter((f) => selectedFilePaths.includes(f.path))
         .reduce((acc, f) => acc + f.size, 0)
 
     const handleCopyHash = () => {
@@ -89,8 +92,12 @@ export default function TorrentAnalyzePage() {
     }
 
     const handleGetQuote = () => {
-        if (selectedFileIndices.length === 0) {
+        if (selectedFilePaths.length === 0) {
             toast.error('Please select at least one file')
+            return
+        }
+        if (!selectedStorageProfileId) {
+            toast.error('Please select a storage destination')
             return
         }
         getQuote(voucherCode || undefined)
@@ -182,7 +189,7 @@ export default function TorrentAnalyzePage() {
                             <div>
                                 <CardTitle>Select Files</CardTitle>
                                 <CardDescription>
-                                    Choose which files to download ({selectedFileIndices.length} of {analysisResult.files.length} selected)
+                                    Choose which files to download ({selectedFilePaths.length} of {analysisResult.files.length} selected)
                                 </CardDescription>
                             </div>
                             <div className="flex gap-2">
@@ -201,16 +208,16 @@ export default function TorrentAnalyzePage() {
                                         key={file.index}
                                         className={cn(
                                             'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
-                                            selectedFileIndices.includes(file.index)
+                                            selectedFilePaths.includes(file.path)
                                                 ? 'border-primary bg-primary/5'
                                                 : 'border-border hover:bg-muted/50'
                                         )}
-                                        onClick={() => toggleFileSelection(file.index)}
+                                        onClick={() => toggleFileSelection(file.path)}
                                     >
                                         <input
                                             type="checkbox"
-                                            checked={selectedFileIndices.includes(file.index)}
-                                            onChange={() => toggleFileSelection(file.index)}
+                                            checked={selectedFilePaths.includes(file.path)}
+                                            onChange={() => toggleFileSelection(file.path)}
                                             className="h-4 w-4 rounded border-muted-foreground"
                                         />
                                         <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -243,9 +250,9 @@ export default function TorrentAnalyzePage() {
                             <CardContent className="space-y-3">
                                 <div className="flex justify-between text-sm">
                                     <span className="text-muted-foreground">
-                                        Size ({quoteResult.pricingDetails.totalSizeInGb.toFixed(2)} GB × ${quoteResult.pricingDetails.baseRatePerGb}/GB)
+                                        Size ({quoteResult.pricingDetails.calculatedSizeInGb.toFixed(2)} GB × ${quoteResult.pricingDetails.baseRatePerGb}/GB)
                                     </span>
-                                    <span>{formatCurrency(quoteResult.pricingDetails.totalSizeInGb * quoteResult.pricingDetails.baseRatePerGb, 'USD')}</span>
+                                    <span>{formatCurrency(quoteResult.pricingDetails.calculatedSizeInGb * quoteResult.pricingDetails.baseRatePerGb, 'USD')}</span>
                                 </div>
                                 {quoteResult.pricingDetails.regionMultiplier !== 1 && (
                                     <div className="flex justify-between text-sm">
@@ -274,6 +281,22 @@ export default function TorrentAnalyzePage() {
                                         <span className="text-2xl font-bold text-primary">{formatCurrency(quoteResult.finalAmountInUSD, 'USD')}</span>
                                     </div>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Storage Profile Selection */}
+                    {!quoteResult && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Cloud className="h-5 w-5" />
+                                    Storage Destination
+                                </CardTitle>
+                                <CardDescription>Select where to upload your files</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <StorageProfileSelector />
                             </CardContent>
                         </Card>
                     )}
@@ -349,7 +372,7 @@ export default function TorrentAnalyzePage() {
                                 <>
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">Selected files</span>
-                                        <span className="font-medium">{selectedFileIndices.length}</span>
+                                        <span className="font-medium">{selectedFilePaths.length}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">Total size</span>
@@ -358,7 +381,7 @@ export default function TorrentAnalyzePage() {
                                     <Button
                                         onClick={handleGetQuote}
                                         className="w-full"
-                                        disabled={selectedFileIndices.length === 0 || isGettingQuote}
+                                        disabled={selectedFilePaths.length === 0 || !selectedStorageProfileId || isGettingQuote}
                                     >
                                         {isGettingQuote ? (
                                             <>

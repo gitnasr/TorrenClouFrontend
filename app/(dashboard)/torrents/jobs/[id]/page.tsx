@@ -50,12 +50,6 @@ const statusConfig: Record<JobStatus, {
         label: 'Downloading',
         color: 'text-teal-primary',
     },
-    [JobStatus.SYNCING]: {
-        icon: <Cloud className="h-6 w-6" />,
-        badgeVariant: 'secondary',
-        label: 'Syncing to storage',
-        color: 'text-teal-secondary',
-    },
     [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-6 w-6" />,
         badgeVariant: 'pending',
@@ -68,12 +62,6 @@ const statusConfig: Record<JobStatus, {
         label: 'Uploading',
         color: 'text-teal-secondary',
     },
-    [JobStatus.RETRYING]: {
-        icon: <RefreshCcw className="h-6 w-6" />,
-        badgeVariant: 'processing',
-        label: 'Retrying',
-        color: 'text-warning',
-    },
     [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
         icon: <RefreshCcw className="h-6 w-6" />,
         badgeVariant: 'processing',
@@ -84,12 +72,6 @@ const statusConfig: Record<JobStatus, {
         icon: <RefreshCcw className="h-6 w-6" />,
         badgeVariant: 'processing',
         label: 'Retrying upload',
-        color: 'text-warning',
-    },
-    [JobStatus.SYNC_RETRY]: {
-        icon: <RefreshCcw className="h-6 w-6" />,
-        badgeVariant: 'processing',
-        label: 'Retrying sync',
         color: 'text-warning',
     },
     [JobStatus.COMPLETED]: {
@@ -225,12 +207,10 @@ export default function JobDetailsPage() {
     const isActive = [
         JobStatus.QUEUED,
         JobStatus.DOWNLOADING,
-        JobStatus.SYNCING,
         JobStatus.PENDING_UPLOAD,
         JobStatus.UPLOADING,
         JobStatus.TORRENT_DOWNLOAD_RETRY,
-        JobStatus.UPLOAD_RETRY,
-        JobStatus.SYNC_RETRY
+        JobStatus.UPLOAD_RETRY
     ].includes(job.status as JobStatus)
 
     return (
@@ -292,31 +272,31 @@ export default function JobDetailsPage() {
                     )}
 
                     {/* Error Card (for failed jobs) */}
-                    {(job.status === JobStatus.FAILED || 
-                      job.status === JobStatus.TORRENT_FAILED || 
-                      job.status === JobStatus.UPLOAD_FAILED || 
-                      job.status === JobStatus.GOOGLE_DRIVE_FAILED) && job.errorMessage && (
-                        <Card className="border-orange/50 bg-orange/5">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-orange">
-                                    <AlertCircle className="h-5 w-5" />
-                                    Error
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <p className="text-sm">{job.errorMessage}</p>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm">
-                                        <RefreshCcw className="mr-2 h-4 w-4" />
-                                        Retry Job
-                                    </Button>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link href="/support">Contact Support</Link>
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {(job.status === JobStatus.FAILED ||
+                        job.status === JobStatus.TORRENT_FAILED ||
+                        job.status === JobStatus.UPLOAD_FAILED ||
+                        job.status === JobStatus.GOOGLE_DRIVE_FAILED) && job.errorMessage && (
+                            <Card className="border-orange/50 bg-orange/5">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-orange">
+                                        <AlertCircle className="h-5 w-5" />
+                                        Error
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-4">
+                                    <p className="text-sm">{job.errorMessage}</p>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" size="sm">
+                                            <RefreshCcw className="mr-2 h-4 w-4" />
+                                            Retry Job
+                                        </Button>
+                                        <Button variant="outline" size="sm" asChild>
+                                            <Link href="/support">Contact Support</Link>
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                     {/* Success Card (for completed jobs) */}
                     {job.status === JobStatus.COMPLETED && (
@@ -367,13 +347,13 @@ export default function JobDetailsPage() {
                                 <div>
                                     <p className="text-sm text-muted-foreground">Selected Files</p>
                                     <p className="font-medium">
-                                        {job.selectedFileIndices.length === 0
+                                        {job.selectedFilePaths.length === 0
                                             ? 'All files'
-                                            : `${job.selectedFileIndices.length} file${job.selectedFileIndices.length > 1 ? 's' : ''}`}
+                                            : `${job.selectedFilePaths.length} file${job.selectedFilePaths.length > 1 ? 's' : ''}`}
                                     </p>
-                                    {job.selectedFileIndices.length > 0 && job.selectedFileIndices.length <= 10 && (
+                                    {job.selectedFilePaths.length > 0 && job.selectedFilePaths.length <= 10 && (
                                         <p className="text-xs text-muted-foreground mt-1">
-                                            Indices: {job.selectedFileIndices.join(', ')}
+                                            {job.selectedFilePaths.slice(0, 5).map(p => p.split('/').pop()).join(', ')}{job.selectedFilePaths.length > 5 ? '...' : ''}
                                         </p>
                                     )}
                                 </div>

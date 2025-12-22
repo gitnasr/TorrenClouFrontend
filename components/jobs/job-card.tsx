@@ -49,13 +49,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-primary',
         bgColor: 'bg-primary/20',
     },
-    [JobStatus.SYNCING]: {
-        icon: <Cloud className="h-5 w-5" />,
-        badgeVariant: 'secondary',
-        label: 'Syncing to storage',
-        color: 'text-info',
-        bgColor: 'bg-info/20',
-    },
     [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-5 w-5" />,
         badgeVariant: 'pending',
@@ -70,13 +63,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-info',
         bgColor: 'bg-info/20',
     },
-    [JobStatus.RETRYING]: {
-        icon: <RefreshCw className="h-5 w-5" />,
-        badgeVariant: 'processing',
-        label: 'Retrying',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
     [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
         icon: <RefreshCw className="h-5 w-5" />,
         badgeVariant: 'processing',
@@ -88,13 +74,6 @@ const statusConfig: Record<JobStatus, {
         icon: <RefreshCw className="h-5 w-5" />,
         badgeVariant: 'processing',
         label: 'Retrying upload',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
-    [JobStatus.SYNC_RETRY]: {
-        icon: <RefreshCw className="h-5 w-5" />,
-        badgeVariant: 'processing',
-        label: 'Retrying sync',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
@@ -147,12 +126,10 @@ export function JobCard({ job, className }: JobCardProps) {
     const isActive = [
         JobStatus.QUEUED,
         JobStatus.DOWNLOADING,
-        JobStatus.SYNCING,
         JobStatus.PENDING_UPLOAD,
         JobStatus.UPLOADING,
         JobStatus.TORRENT_DOWNLOAD_RETRY,
-        JobStatus.UPLOAD_RETRY,
-        JobStatus.SYNC_RETRY
+        JobStatus.UPLOAD_RETRY
     ].includes(job.status)
 
     return (
@@ -168,10 +145,10 @@ export function JobCard({ job, className }: JobCardProps) {
                     'absolute left-0 top-0 bottom-0 w-1',
                     isActive && 'bg-info',
                     job.status === JobStatus.COMPLETED && 'bg-success',
-                    (job.status === JobStatus.FAILED || 
-                     job.status === JobStatus.TORRENT_FAILED || 
-                     job.status === JobStatus.UPLOAD_FAILED || 
-                     job.status === JobStatus.GOOGLE_DRIVE_FAILED) && 'bg-danger',
+                    (job.status === JobStatus.FAILED ||
+                        job.status === JobStatus.TORRENT_FAILED ||
+                        job.status === JobStatus.UPLOAD_FAILED ||
+                        job.status === JobStatus.GOOGLE_DRIVE_FAILED) && 'bg-danger',
                     job.status === JobStatus.CANCELLED && 'bg-surface-200'
                 )} />
 
@@ -202,9 +179,9 @@ export function JobCard({ job, className }: JobCardProps) {
                                             <FileText className="h-3.5 w-3.5" />
                                             {formatFileSize(job.totalBytes)}
                                         </span>
-                                        {job.selectedFileIndices.length > 0 && (
+                                        {job.selectedFilePaths.length > 0 && (
                                             <span className="flex items-center gap-1">
-                                                {job.selectedFileIndices.length} file{job.selectedFileIndices.length > 1 ? 's' : ''}
+                                                {job.selectedFilePaths.length} file{job.selectedFilePaths.length > 1 ? 's' : ''}
                                             </span>
                                         )}
                                         <span className="flex items-center gap-1">

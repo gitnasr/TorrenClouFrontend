@@ -12,7 +12,9 @@ export enum RegionCode {
 export enum UserRole {
     User = "User",
     Admin = "Admin",
-    Support = "Support"
+    Support = "Support",
+    Suspended = "Suspended",
+    Banned = "Banned"
 }
 
 export enum StorageProviderType {
@@ -54,21 +56,28 @@ export enum DepositStatus {
 export enum JobStatus {
     QUEUED = "QUEUED",
     DOWNLOADING = "DOWNLOADING",
-    /** @internal Admin-only: Internal sync stage for building storage cache */
-    SYNCING = "SYNCING",
     PENDING_UPLOAD = "PENDING_UPLOAD",
     UPLOADING = "UPLOADING",
-    RETRYING = "RETRYING",
     TORRENT_DOWNLOAD_RETRY = "TORRENT_DOWNLOAD_RETRY",
     UPLOAD_RETRY = "UPLOAD_RETRY",
-    /** @internal Admin-only: Internal sync retry stage */
-    SYNC_RETRY = "SYNC_RETRY",
     COMPLETED = "COMPLETED",
     FAILED = "FAILED",
     CANCELLED = "CANCELLED",
     TORRENT_FAILED = "TORRENT_FAILED",
     UPLOAD_FAILED = "UPLOAD_FAILED",
     GOOGLE_DRIVE_FAILED = "GOOGLE_DRIVE_FAILED"
+}
+
+/**
+ * Sync job status - separate from JobStatus.
+ * Used for admin sync jobs tracking.
+ */
+export enum SyncStatus {
+    NOT_STARTED = "NotStarted",
+    SYNCING = "SYNCING",
+    SYNC_RETRY = "SYNC_RETRY",
+    COMPLETED = "COMPLETED",
+    FAILED = "FAILED"
 }
 
 export enum JobType {

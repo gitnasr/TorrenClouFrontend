@@ -34,7 +34,7 @@ function toUserJob(job: Job): UserJob {
     lastHeartbeat: job.lastHeartbeat ?? undefined,
     bytesDownloaded: job.bytesDownloaded,
     totalBytes: job.totalBytes,
-    selectedFileIndices: job.selectedFileIndices,
+    selectedFilePaths: job.selectedFilePaths,
     progress: job.progressPercentage,
     fileName: job.requestFileName ?? undefined,
     storageProfileName: job.storageProfileName ?? undefined,

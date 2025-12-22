@@ -40,21 +40,24 @@ export async function analyzeTorrentFile(file: File): Promise<TorrentInfo> {
  * POST /api/torrents/quote (authenticated)
  * 
  * @param torrentFile - The .torrent file
- * @param selectedFileIndices - Array of file indices to download
+ * @param selectedFilePaths - Array of file paths to download (must match paths from TorrentInfo.files)
+ * @param storageProfileId - ID of the storage profile to use for upload
  * @param voucherCode - Optional voucher code for discount
  * @returns Quote with pricing details and invoice ID
  */
 export async function getTorrentQuote(
     torrentFile: File,
-    selectedFileIndices: number[],
+    selectedFilePaths: string[],
+    storageProfileId: number,
     voucherCode?: string
 ): Promise<QuoteResponse> {
     const formData = new FormData()
     formData.append('torrentFile', torrentFile)
+    formData.append('storageProfileId', storageProfileId.toString())
 
-    // Append each index separately for proper array handling
-    selectedFileIndices.forEach(index => {
-        formData.append('selectedFileIndices', index.toString())
+    // Append each path separately for proper array handling
+    selectedFilePaths.forEach(path => {
+        formData.append('selectedFilePaths', path)
     })
 
     if (voucherCode) {
@@ -73,3 +76,4 @@ export async function getTorrentQuote(
 
     return quoteResponseSchema.parse(response.data)
 }
+

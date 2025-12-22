@@ -12,10 +12,10 @@ export type { WalletBalanceDto, InvoicePaymentResult }
 
 /**
  * Get the current user's wallet balance
- * GET /api/payments/wallet/balance (authenticated)
+ * GET /api/finance/wallet/balance (authenticated)
  */
 export async function getWalletBalance(): Promise<WalletBalanceDto> {
-    const response = await apiClient.get<WalletBalanceDto>('/payments/wallet/balance')
+    const response = await apiClient.get<WalletBalanceDto>('/finance/wallet/balance')
     return walletBalanceSchema.parse(response.data)
 }
 

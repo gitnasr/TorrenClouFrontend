@@ -47,12 +47,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-primary',
         bgColor: 'bg-primary/20',
     },
-    [JobStatus.SYNCING]: {
-        icon: <Cloud className="h-5 w-5" />,
-        label: 'Syncing to storage',
-        color: 'text-info',
-        bgColor: 'bg-info/20',
-    },
     [JobStatus.PENDING_UPLOAD]: {
         icon: <Clock className="h-5 w-5" />,
         label: 'Pending Upload',
@@ -65,12 +59,6 @@ const statusConfig: Record<JobStatus, {
         color: 'text-info',
         bgColor: 'bg-info/20',
     },
-    [JobStatus.RETRYING]: {
-        icon: <Activity className="h-5 w-5" />,
-        label: 'Retrying',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
     [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
         icon: <RefreshCw className="h-5 w-5" />,
         label: 'Retrying download',
@@ -80,12 +68,6 @@ const statusConfig: Record<JobStatus, {
     [JobStatus.UPLOAD_RETRY]: {
         icon: <RefreshCw className="h-5 w-5" />,
         label: 'Retrying upload',
-        color: 'text-warning',
-        bgColor: 'bg-warning/20',
-    },
-    [JobStatus.SYNC_RETRY]: {
-        icon: <RefreshCw className="h-5 w-5" />,
-        label: 'Retrying sync',
         color: 'text-warning',
         bgColor: 'bg-warning/20',
     },
@@ -286,11 +268,11 @@ export function JobDetail() {
                             value={formatFileSize(job.totalBytes)}
                         />
 
-                        {job.selectedFileIndices.length > 0 && (
+                        {job.selectedFilePaths.length > 0 && (
                             <DetailRow
                                 icon={<Files className="h-4 w-4" />}
                                 label="Selected Files"
-                                value={`${job.selectedFileIndices.length} file(s)`}
+                                value={`${job.selectedFilePaths.length} file(s)`}
                             />
                         )}
                     </div>

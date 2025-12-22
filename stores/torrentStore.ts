@@ -12,16 +12,18 @@ interface TorrentStore {
     quoteResult: QuoteResponse | null
 
     // Selection state
-    selectedFileIndices: number[]
+    selectedFilePaths: string[]
+    selectedStorageProfileId: number | null
 
     // Actions
     setAnalysisResult: (result: TorrentInfo) => void
     setTorrentFile: (file: File | null) => void
     setQuoteResult: (result: QuoteResponse | null) => void
-    setSelectedFileIndices: (indices: number[]) => void
-    toggleFileSelection: (index: number) => void
+    setSelectedFilePaths: (paths: string[]) => void
+    toggleFileSelection: (path: string) => void
     selectAllFiles: () => void
     deselectAllFiles: () => void
+    setSelectedStorageProfileId: (id: number | null) => void
     clearTorrentData: () => void
 }
 
@@ -33,7 +35,8 @@ export const useTorrentStore = create<TorrentStore>()(
             analysisResult: null,
             torrentFile: null,
             quoteResult: null,
-            selectedFileIndices: [],
+            selectedFilePaths: [],
+            selectedStorageProfileId: null,
 
             // Actions
             setAnalysisResult: (result) =>
@@ -41,7 +44,7 @@ export const useTorrentStore = create<TorrentStore>()(
                     {
                         analysisResult: result,
                         // Auto-select all files when analysis completes
-                        selectedFileIndices: result.files.map((f) => f.index),
+                        selectedFilePaths: result.files.map((f) => f.path),
                         // Clear any previous quote when new analysis is done
                         quoteResult: null,
                     },
@@ -55,15 +58,15 @@ export const useTorrentStore = create<TorrentStore>()(
             setQuoteResult: (result) =>
                 set({ quoteResult: result }, false, 'setQuoteResult'),
 
-            setSelectedFileIndices: (indices) =>
-                set({ selectedFileIndices: indices }, false, 'setSelectedFileIndices'),
+            setSelectedFilePaths: (paths) =>
+                set({ selectedFilePaths: paths }, false, 'setSelectedFilePaths'),
 
-            toggleFileSelection: (index) =>
+            toggleFileSelection: (path) =>
                 set(
                     (state) => ({
-                        selectedFileIndices: state.selectedFileIndices.includes(index)
-                            ? state.selectedFileIndices.filter((i) => i !== index)
-                            : [...state.selectedFileIndices, index],
+                        selectedFilePaths: state.selectedFilePaths.includes(path)
+                            ? state.selectedFilePaths.filter((p) => p !== path)
+                            : [...state.selectedFilePaths, path],
                         // Clear quote when selection changes
                         quoteResult: null,
                     }),
@@ -74,8 +77,8 @@ export const useTorrentStore = create<TorrentStore>()(
             selectAllFiles: () =>
                 set(
                     (state) => ({
-                        selectedFileIndices:
-                            state.analysisResult?.files.map((f) => f.index) ?? [],
+                        selectedFilePaths:
+                            state.analysisResult?.files.map((f) => f.path) ?? [],
                         quoteResult: null,
                     }),
                     false,
@@ -84,10 +87,13 @@ export const useTorrentStore = create<TorrentStore>()(
 
             deselectAllFiles: () =>
                 set(
-                    { selectedFileIndices: [], quoteResult: null },
+                    { selectedFilePaths: [], quoteResult: null },
                     false,
                     'deselectAllFiles'
                 ),
+
+            setSelectedStorageProfileId: (id) =>
+                set({ selectedStorageProfileId: id }, false, 'setSelectedStorageProfileId'),
 
             clearTorrentData: () =>
                 set(
@@ -95,7 +101,8 @@ export const useTorrentStore = create<TorrentStore>()(
                         analysisResult: null,
                         torrentFile: null,
                         quoteResult: null,
-                        selectedFileIndices: [],
+                        selectedFilePaths: [],
+                        selectedStorageProfileId: null,
                     },
                     false,
                     'clearTorrentData'
@@ -109,14 +116,16 @@ export const useTorrentStore = create<TorrentStore>()(
 export const selectAnalysisResult = (state: TorrentStore) => state.analysisResult
 export const selectTorrentFile = (state: TorrentStore) => state.torrentFile
 export const selectQuoteResult = (state: TorrentStore) => state.quoteResult
-export const selectSelectedFileIndices = (state: TorrentStore) => state.selectedFileIndices
+export const selectSelectedFilePaths = (state: TorrentStore) => state.selectedFilePaths
+export const selectSelectedStorageProfileId = (state: TorrentStore) => state.selectedStorageProfileId
 
 // Computed selectors
 export const selectSelectedFilesSize = (state: TorrentStore) => {
     if (!state.analysisResult) return 0
     return state.analysisResult.files
-        .filter((f) => state.selectedFileIndices.includes(f.index))
+        .filter((f) => state.selectedFilePaths.includes(f.path))
         .reduce((acc, f) => acc + f.size, 0)
 }
 
 export const selectHasQuote = (state: TorrentStore) => state.quoteResult !== null
+

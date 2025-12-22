@@ -2,13 +2,16 @@
 
 import { BalanceCard } from '@/components/wallet/balance-card'
 import { TransactionList } from '@/components/wallet/transaction-list'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Receipt, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Plus, Receipt, ArrowDownLeft, ArrowUpRight, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters'
-import { mockWalletBalance, mockTransactions, mockDeposits } from '@/lib/mockData'
-import { DepositStatus } from '@/types/enums'
+import { mockDeposits } from '@/lib/mockData'
+import { DepositStatus, TransactionType } from '@/types/enums'
+import { useWalletBalance, useWalletTransactions } from '@/hooks/useWallet'
+import type { WalletTransaction } from '@/types/api'
 import Link from 'next/link'
 
 const depositBadgeVariants: Record<DepositStatus, 'default' | 'warning' | 'destructive' | 'secondary'> = {
@@ -18,8 +21,97 @@ const depositBadgeVariants: Record<DepositStatus, 'default' | 'warning' | 'destr
     [DepositStatus.Expired]: 'destructive',
 }
 
+// Helper to convert API transaction type string to enum
+function mapTransactionType(type: string): TransactionType {
+    const typeMap: Record<string, TransactionType> = {
+        'DEPOSIT': TransactionType.DEPOSIT,
+        'PAYMENT': TransactionType.PAYMENT,
+        'REFUND': TransactionType.REFUND,
+        'ADMIN_ADJUSTMENT': TransactionType.ADMIN_ADJUSTMENT,
+        'BONUS': TransactionType.BONUS,
+        'DEDUCTION': TransactionType.DEDUCTION,
+    }
+    return typeMap[type] || TransactionType.PAYMENT
+}
+
+// Transform API transactions to component format
+function transformTransactions(transactions: {
+    id: number
+    amount: number
+    type: string
+    referenceId?: string | null
+    description: string
+    createdAt: string
+}[]): WalletTransaction[] {
+    return transactions.map(t => ({
+        id: t.id,
+        amount: t.amount,
+        type: mapTransactionType(t.type),
+        referenceId: t.referenceId ?? undefined,
+        description: t.description,
+        createdAt: t.createdAt,
+    }))
+}
+
+function BalanceCardSkeleton() {
+    return (
+        <Card className="bg-gradient-to-br from-primary/20 to-surface-tonal border-primary/30">
+            <CardContent className="pt-6 space-y-4">
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-24" />
+                    <Skeleton className="h-10 w-40" />
+                    <Skeleton className="h-4 w-32" />
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
+function TransactionsSkeleton() {
+    return (
+        <Card>
+            <CardHeader className="pb-2">
+                <Skeleton className="h-5 w-36" />
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {[1, 2, 3, 4, 5].map((i) => (
+                        <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div className="flex items-center gap-3">
+                                <Skeleton className="h-8 w-8 rounded-full" />
+                                <div className="space-y-1">
+                                    <Skeleton className="h-4 w-32" />
+                                    <Skeleton className="h-3 w-20" />
+                                </div>
+                            </div>
+                            <Skeleton className="h-5 w-16" />
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function WalletPage() {
+    const { data: balanceData, isLoading: isLoadingBalance, error: balanceError } = useWalletBalance()
+    const { data: transactionsData, isLoading: isLoadingTransactions, error: transactionsError } = useWalletTransactions({ pageSize: 5 })
+
+    // Still using mock deposits until deposit API is integrated
     const recentDeposits = mockDeposits.slice(0, 3)
+
+    // Calculate total deposits and spent from transactions
+    const transactions = transactionsData?.items || []
+    const totalDeposits = transactions
+        .filter(t => t.amount > 0)
+        .reduce((sum, t) => sum + t.amount, 0)
+    const totalSpent = Math.abs(
+        transactions
+            .filter(t => t.amount < 0)
+            .reduce((sum, t) => sum + t.amount, 0)
+    )
+
+    const transformedTransactions = transformTransactions(transactions)
 
     return (
         <div className="space-y-6">
@@ -39,15 +131,29 @@ export default function WalletPage() {
                 </Button>
             </div>
 
+            {/* Error State */}
+            {(balanceError || transactionsError) && (
+                <Card className="border-destructive bg-destructive/10">
+                    <CardContent className="flex items-center gap-3 pt-6">
+                        <AlertCircle className="h-5 w-5 text-destructive" />
+                        <p className="text-destructive">
+                            Failed to load wallet data. Please try again.
+                        </p>
+                    </CardContent>
+                </Card>
+            )}
+
             {/* Balance and Stats */}
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2">
-                    <BalanceCard
-                        balance={mockWalletBalance.balance}
-                        changeAmount={25.50}
-                        changePercentage={19.5}
-                        showActions={false}
-                    />
+                    {isLoadingBalance ? (
+                        <BalanceCardSkeleton />
+                    ) : (
+                        <BalanceCard
+                            balance={balanceData?.balance ?? 0}
+                            showActions={false}
+                        />
+                    )}
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
                     <Card>
@@ -57,7 +163,11 @@ export default function WalletPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Deposits</p>
-                                <p className="text-xl font-bold">{formatCurrency(350)}</p>
+                                {isLoadingTransactions ? (
+                                    <Skeleton className="h-7 w-20" />
+                                ) : (
+                                    <p className="text-xl font-bold">{formatCurrency(totalDeposits)}</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -68,7 +178,11 @@ export default function WalletPage() {
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Spent</p>
-                                <p className="text-xl font-bold">{formatCurrency(193.22)}</p>
+                                {isLoadingTransactions ? (
+                                    <Skeleton className="h-7 w-20" />
+                                ) : (
+                                    <p className="text-xl font-bold">{formatCurrency(totalSpent)}</p>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -100,10 +214,14 @@ export default function WalletPage() {
             {/* Content Grid */}
             <div className="grid gap-6 lg:grid-cols-2">
                 {/* Recent Transactions */}
-                <TransactionList
-                    transactions={mockTransactions}
-                    limit={5}
-                />
+                {isLoadingTransactions ? (
+                    <TransactionsSkeleton />
+                ) : (
+                    <TransactionList
+                        transactions={transformedTransactions}
+                        limit={5}
+                    />
+                )}
 
                 {/* Recent Deposits */}
                 <Card>
@@ -147,4 +265,3 @@ export default function WalletPage() {
         </div>
     )
 }
-

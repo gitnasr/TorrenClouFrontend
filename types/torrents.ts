@@ -28,21 +28,6 @@ export const torrentFileSchema = z.object({
 export type TorrentFileDto = z.infer<typeof torrentFileSchema>
 
 // ============================================
-// Torrent Info (Analysis Response) Schema
-// ============================================
-
-export const torrentInfoSchema = z.object({
-    infoHash: z.string(),
-    name: z.string(),
-    totalSize: z.number(),
-    files: z.array(torrentFileSchema),
-    trackers: z.array(z.string()),
-    scrapeResult: scrapeAggregationResultSchema,
-})
-
-export type TorrentInfo = z.infer<typeof torrentInfoSchema>
-
-// ============================================
 // Torrent Health Measurements Schema
 // ============================================
 
@@ -61,13 +46,31 @@ export const torrentHealthMeasurementsSchema = z.object({
 export type TorrentHealthMeasurements = z.infer<typeof torrentHealthMeasurementsSchema>
 
 // ============================================
+// Torrent Info (Analysis Response) Schema
+// ============================================
+
+export const torrentInfoSchema = z.object({
+    infoHash: z.string(),
+    name: z.string(),
+    totalSize: z.number(),
+    files: z.array(torrentFileSchema),
+    trackers: z.array(z.string()),
+    scrapeResult: scrapeAggregationResultSchema,
+    healthScore: z.number().optional(),
+    healthMultiplier: z.number().optional(),
+    health: torrentHealthMeasurementsSchema.optional(),
+})
+
+export type TorrentInfo = z.infer<typeof torrentInfoSchema>
+
+// ============================================
 // Pricing Snapshot Schema
 // ============================================
 
 export const pricingSnapshotSchema = z.object({
     totalSizeInBytes: z.number(),
-    totalSizeInGb: z.number(),
-    selectedFiles: z.array(z.number()),
+    calculatedSizeInGb: z.number(),
+    selectedFiles: z.array(z.string()),
     baseRatePerGb: z.number(),
     userRegion: z.string(),
     regionMultiplier: z.number(),

@@ -80,17 +80,20 @@ export function useTorrentAnalysis() {
  */
 export function useTorrentQuote() {
     const router = useRouter()
-    const { setQuoteResult, torrentFile, selectedFileIndices } = useTorrentStore()
+    const { setQuoteResult, torrentFile, selectedFilePaths, selectedStorageProfileId } = useTorrentStore()
 
     return useMutation({
         mutationFn: async (voucherCode?: string): Promise<QuoteResponse> => {
             if (!torrentFile) {
                 throw new Error('No torrent file available')
             }
-            if (selectedFileIndices.length === 0) {
+            if (selectedFilePaths.length === 0) {
                 throw new Error('Please select at least one file')
             }
-            return getTorrentQuote(torrentFile, selectedFileIndices, voucherCode)
+            if (!selectedStorageProfileId) {
+                throw new Error('Please select a storage profile')
+            }
+            return getTorrentQuote(torrentFile, selectedFilePaths, selectedStorageProfileId, voucherCode)
         },
         onSuccess: (data) => {
             // Store quote result for invoice page
@@ -105,3 +108,4 @@ export function useTorrentQuote() {
         },
     })
 }
+

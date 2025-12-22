@@ -26,25 +26,22 @@ function getStatusFilters(userRole?: UserRole) {
         { label: 'All', value: 'all' },
         { label: 'Queued', value: JobStatus.QUEUED },
         { label: 'Downloading', value: JobStatus.DOWNLOADING },
-        { label: 'Syncing', value: JobStatus.SYNCING },
         { label: 'Pending Upload', value: JobStatus.PENDING_UPLOAD },
         { label: 'Uploading', value: JobStatus.UPLOADING },
-        { label: 'Retrying', value: JobStatus.RETRYING },
         { label: 'Retrying Download', value: JobStatus.TORRENT_DOWNLOAD_RETRY },
         { label: 'Retrying Upload', value: JobStatus.UPLOAD_RETRY },
-        { label: 'Retrying Sync', value: JobStatus.SYNC_RETRY },
         { label: 'Completed', value: JobStatus.COMPLETED },
         { label: 'Failed', value: JobStatus.FAILED },
         { label: 'Download Failed', value: JobStatus.TORRENT_FAILED },
         { label: 'Upload Failed', value: JobStatus.UPLOAD_FAILED },
         { label: 'Google Drive Failed', value: JobStatus.GOOGLE_DRIVE_FAILED },
     ]
-    
+
     // Admin and Support see all filters
     if (userRole === UserRole.Admin || userRole === UserRole.Support) {
         return allFilters
     }
-    
+
     // Regular users: filter out admin-only statuses
     return allFilters.filter((filter) => {
         if (filter.value === 'all') return true
@@ -68,7 +65,7 @@ function toUserJob(job: Job): UserJob {
         lastHeartbeat: job.lastHeartbeat ?? undefined,
         bytesDownloaded: job.bytesDownloaded,
         totalBytes: job.totalBytes,
-        selectedFileIndices: job.selectedFileIndices,
+        selectedFilePaths: job.selectedFilePaths,
         progress: job.progressPercentage,
         // Use requestFileName as primary identifier (fallback to job ID)
         fileName: job.requestFileName ?? undefined,
@@ -173,18 +170,16 @@ function JobsListContent() {
                 failed: 0,
             }
         }
-        
+
         return {
             total: filteredJobs.length,
             active: filteredJobs.filter((j) =>
                 j.status === JobStatus.QUEUED ||
                 j.status === JobStatus.DOWNLOADING ||
-                j.status === JobStatus.SYNCING ||
                 j.status === JobStatus.PENDING_UPLOAD ||
                 j.status === JobStatus.UPLOADING ||
                 j.status === JobStatus.TORRENT_DOWNLOAD_RETRY ||
-                j.status === JobStatus.UPLOAD_RETRY ||
-                j.status === JobStatus.SYNC_RETRY
+                j.status === JobStatus.UPLOAD_RETRY
             ).length,
             completed: filteredJobs.filter((j) => j.status === JobStatus.COMPLETED).length,
             failed: filteredJobs.filter((j) =>

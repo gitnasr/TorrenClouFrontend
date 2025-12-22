@@ -11,31 +11,25 @@ import type { UserJob } from './api'
 const jobStatusNumberMap: Record<number, string> = {
     0: 'QUEUED',
     1: 'DOWNLOADING',
-    2: 'SYNCING',
-    3: 'PENDING_UPLOAD',
-    4: 'UPLOADING',
-    5: 'RETRYING',
-    6: 'TORRENT_DOWNLOAD_RETRY',
-    7: 'UPLOAD_RETRY',
-    8: 'SYNC_RETRY',
-    9: 'COMPLETED',
-    10: 'FAILED',
-    11: 'CANCELLED',
-    12: 'TORRENT_FAILED',
-    13: 'UPLOAD_FAILED',
-    14: 'GOOGLE_DRIVE_FAILED',
+    2: 'PENDING_UPLOAD',
+    3: 'UPLOADING',
+    4: 'TORRENT_DOWNLOAD_RETRY',
+    5: 'UPLOAD_RETRY',
+    6: 'COMPLETED',
+    7: 'FAILED',
+    8: 'CANCELLED',
+    9: 'TORRENT_FAILED',
+    10: 'UPLOAD_FAILED',
+    11: 'GOOGLE_DRIVE_FAILED',
 }
 
 const validStatusStrings = [
     'QUEUED',
     'DOWNLOADING',
-    'SYNCING',
     'PENDING_UPLOAD',
     'UPLOADING',
-    'RETRYING',
     'TORRENT_DOWNLOAD_RETRY',
     'UPLOAD_RETRY',
-    'SYNC_RETRY',
     'COMPLETED',
     'FAILED',
     'CANCELLED',
@@ -78,7 +72,7 @@ export const jobSchema = z.object({
     lastHeartbeat: z.string().datetime().nullable().optional(),
     bytesDownloaded: z.number().int().nonnegative(),
     totalBytes: z.number().int().nonnegative(),
-    selectedFileIndices: z.array(z.number().int().nonnegative()),
+    selectedFilePaths: z.array(z.string()),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime().nullable().optional(),
     startedAt: z.string().datetime().nullable().optional(),
@@ -123,7 +117,7 @@ export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 export interface JobsQueryParams {
     pageNumber?: number
     pageSize?: number
-    status?: 'QUEUED' | 'DOWNLOADING' | 'SYNCING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'RETRYING' | 'TORRENT_DOWNLOAD_RETRY' | 'UPLOAD_RETRY' | 'SYNC_RETRY' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'TORRENT_FAILED' | 'UPLOAD_FAILED' | 'GOOGLE_DRIVE_FAILED' | null
+    status?: 'QUEUED' | 'DOWNLOADING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'TORRENT_DOWNLOAD_RETRY' | 'UPLOAD_RETRY' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'TORRENT_FAILED' | 'UPLOAD_FAILED' | 'GOOGLE_DRIVE_FAILED' | null
 }
 
 // ============================================
@@ -168,13 +162,10 @@ export interface JobsPaginationProps {
 export const statusLabels: Record<JobStatus, string> = {
     [JobStatus.QUEUED]: 'Queued',
     [JobStatus.DOWNLOADING]: 'Downloading',
-    [JobStatus.SYNCING]: 'Syncing to storage',
     [JobStatus.PENDING_UPLOAD]: 'Pending Upload',
     [JobStatus.UPLOADING]: 'Uploading',
-    [JobStatus.RETRYING]: 'Retrying',
     [JobStatus.TORRENT_DOWNLOAD_RETRY]: 'Retrying download',
     [JobStatus.UPLOAD_RETRY]: 'Retrying upload',
-    [JobStatus.SYNC_RETRY]: 'Retrying sync',
     [JobStatus.COMPLETED]: 'Completed',
     [JobStatus.FAILED]: 'Failed',
     [JobStatus.CANCELLED]: 'Cancelled',
