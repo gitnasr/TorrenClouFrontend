@@ -6,25 +6,24 @@ import type { JobsFiltersProps } from '@/types/jobs'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Filter, X } from 'lucide-react'
-
-const statusOptions: { value: JobStatus | null; label: string }[] = [
-    { value: null, label: 'All Statuses' },
-    { value: JobStatus.QUEUED, label: 'Queued' },
-    { value: JobStatus.DOWNLOADING, label: 'Downloading' },
-    { value: JobStatus.PENDING_UPLOAD, label: 'Pending Upload' },
-    { value: JobStatus.UPLOADING, label: 'Uploading' },
-    { value: JobStatus.TORRENT_DOWNLOAD_RETRY, label: 'Retrying Download' },
-    { value: JobStatus.UPLOAD_RETRY, label: 'Retrying Upload' },
-    { value: JobStatus.COMPLETED, label: 'Completed' },
-    { value: JobStatus.FAILED, label: 'Failed' },
-    { value: JobStatus.TORRENT_FAILED, label: 'Download Failed' },
-    { value: JobStatus.UPLOAD_FAILED, label: 'Upload Failed' },
-    { value: JobStatus.GOOGLE_DRIVE_FAILED, label: 'Google Drive Failed' },
-    { value: JobStatus.CANCELLED, label: 'Cancelled' },
-]
+import { useJobStatistics } from '@/hooks/useJobs'
+import { statusLabels } from '@/types/jobs'
 
 export function JobsFilters({ className }: JobsFiltersProps) {
     const { selectedStatus, setSelectedStatus, resetFilters } = useJobsStore()
+    const { data: jobStats } = useJobStatistics()
+
+    const statusOptions: { value: JobStatus | null | string; label: string }[] = [
+        { value: null, label: 'All Statuses' },
+        ...(jobStats?.statusFilters ?? []).map((sf) => {
+            const statusKey = sf.status as JobStatus
+            const baseLabel = statusLabels[statusKey] ?? sf.status
+            return {
+                value: sf.status,
+                label: `${baseLabel} (${sf.count})`,
+            }
+        }),
+    ]
 
     return (
         <div className={cn(

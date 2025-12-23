@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import type { TorrentJob } from '@/types/api'
+import { jobsKeys } from '@/hooks/useJobs'
 
 export default function FilesPage() {
   const queryClient = useQueryClient()
@@ -36,6 +37,8 @@ export default function FilesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['torrent-jobs'] })
+      // Also refresh jobs list & statistics used on the main jobs page
+      queryClient.invalidateQueries({ queryKey: jobsKeys.all })
       toast.success('Job deleted successfully')
     },
     onError: () => {
@@ -49,6 +52,8 @@ export default function FilesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['torrent-jobs'] })
+      // Also refresh jobs list & statistics used on the main jobs page
+      queryClient.invalidateQueries({ queryKey: jobsKeys.all })
       toast.success('Job retried successfully')
     },
     onError: () => {

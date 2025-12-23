@@ -1,19 +1,22 @@
 // Jobs API client with Zod validation
+import { z } from 'zod'
 import apiClient from '../axios'
 import {
     jobSchema,
     paginatedJobsSchema,
     jobStatisticsSchema,
+    jobTimelineEntrySchema,
 } from '@/types/jobs'
 import type {
     Job,
     PaginatedJobs,
     JobsQueryParams,
     JobStatistics,
+    JobTimelineEntry,
 } from '@/types/jobs'
 
 // Re-export types for convenience
-export type { Job, PaginatedJobs, JobsQueryParams, JobStatistics }
+export type { Job, PaginatedJobs, JobsQueryParams, JobStatistics, JobTimelineEntry }
 export { getJobsErrorMessage, jobsErrorMessages } from '@/types/jobs'
 
 /**
@@ -71,6 +74,24 @@ export async function getJobStatistics(): Promise<JobStatistics> {
         // Log validation errors for debugging
         console.error('Job statistics validation error:', error)
         throw new Error('Invalid statistics data received from server. Please try again later.')
+    }
+}
+
+/**
+ * Get job timeline (complete history of status changes)
+ * GET /api/jobs/{id}/timeline
+ */
+export async function getJobTimeline(jobId: number): Promise<JobTimelineEntry[]> {
+    const response = await apiClient.get<JobTimelineEntry[]>(`/jobs/${jobId}/timeline`)
+    
+    try {
+        // Validate array of timeline entries
+        const entries = z.array(jobTimelineEntrySchema).parse(response.data)
+        return entries
+    } catch (error) {
+        // Log validation errors for debugging
+        console.error('Job timeline validation error:', error)
+        throw new Error('Invalid timeline data received from server. Please try again later.')
     }
 }
 

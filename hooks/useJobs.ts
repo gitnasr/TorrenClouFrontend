@@ -2,10 +2,11 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
-import { getJobs, getJob, getJobStatistics } from '@/lib/api/jobs'
+import { getJobs, getJob, getJobStatistics, getJobTimeline } from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics } from '@/types/jobs'
-import { paginatedJobsSchema, jobSchema, jobStatisticsSchema } from '@/types/jobs'
+import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics, JobTimelineEntry } from '@/types/jobs'
+import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema } from '@/types/jobs'
+import { z } from 'zod'
 
 // ============================================
 // Query Keys
@@ -18,6 +19,8 @@ export const jobsKeys = {
     details: () => [...jobsKeys.all, 'detail'] as const,
     detail: (id: number) => [...jobsKeys.details(), id] as const,
     statistics: () => [...jobsKeys.all, 'statistics'] as const,
+    timelines: () => [...jobsKeys.all, 'timeline'] as const,
+    timeline: (id: number) => [...jobsKeys.timelines(), id] as const,
 }
 
 // ============================================
@@ -26,7 +29,7 @@ export const jobsKeys = {
 
 /**
  * Hook to fetch paginated jobs list
- * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
+ * Enhanced with refetch on focus, reconnect, and polling for active jobs
  */
 export function useJobs() {
     const { status } = useSession()
@@ -45,12 +48,24 @@ export function useJobs() {
         },
         enabled: status === 'authenticated',
         staleTime: 5 * 1000, // 5 seconds - jobs update frequently
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        refetchOnReconnect: true,
+        // Poll every 10 seconds if there are active jobs
+        refetchInterval: (query) => {
+            const data = query.state.data
+            if (!data) return false
+            const hasActiveJobs = data.items.some(job => 
+                ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'TORRENT_DOWNLOAD_RETRY', 'UPLOAD_RETRY'].includes(job.status)
+            )
+            return hasActiveJobs ? 10 * 1000 : false
+        },
     })
 }
 
 /**
  * Hook to fetch a specific job by ID
- * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
+ * Enhanced with refetch on focus, reconnect, and polling for active jobs
  */
 export function useJob(jobId: number | null) {
     const { status } = useSession()
@@ -67,12 +82,22 @@ export function useJob(jobId: number | null) {
         },
         enabled: status === 'authenticated' && !!jobId,
         staleTime: 2 * 1000, // 2 seconds - job details update frequently
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        refetchOnReconnect: true,
+        // Poll every 5 seconds if job is active
+        refetchInterval: (query) => {
+            const data = query.state.data
+            if (!data) return false
+            const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'TORRENT_DOWNLOAD_RETRY', 'UPLOAD_RETRY'].includes(data.status)
+            return isActive ? 5 * 1000 : false
+        },
     })
 }
 
 /**
  * Hook to fetch job statistics
- * Uses default React Query behavior (refetch on window focus, reconnect, etc.)
+ * Enhanced with refetch on focus
  */
 export function useJobStatistics() {
     const { status } = useSession()
@@ -86,6 +111,43 @@ export function useJobStatistics() {
         },
         enabled: status === 'authenticated',
         staleTime: 10 * 1000, // 10 seconds
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        refetchOnReconnect: true,
+    })
+}
+
+/**
+ * Hook to fetch job timeline
+ * Enhanced with refetch on focus, reconnect, and polling for active jobs
+ */
+export function useJobTimeline(jobId: number | null) {
+    const { status } = useSession()
+    
+    // Get job data to check if it's active
+    const { data: jobData } = useJob(jobId)
+
+    return useQuery({
+        queryKey: jobsKeys.timeline(jobId ?? 0),
+        queryFn: async () => {
+            if (!jobId) {
+                throw new Error('Invalid job ID')
+            }
+            const data = await getJobTimeline(jobId)
+            // Validate with Zod
+            return z.array(jobTimelineEntrySchema).parse(data)
+        },
+        enabled: status === 'authenticated' && !!jobId,
+        staleTime: 5 * 1000, // 5 seconds - timeline updates when job status changes
+        refetchOnWindowFocus: true,
+        refetchOnMount: true,
+        refetchOnReconnect: true,
+        // Poll every 10 seconds only if job is active
+        refetchInterval: (query) => {
+            if (!jobData) return false
+            const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'TORRENT_DOWNLOAD_RETRY', 'UPLOAD_RETRY'].includes(jobData.status)
+            return isActive ? 10 * 1000 : false
+        },
     })
 }
 

@@ -268,7 +268,7 @@ export default function SyncJobDetailPage() {
                                 <div>
                                     <p className="text-sm text-muted-foreground">Related Job ID</p>
                                     <Link
-                                        href={`/torrents/jobs/${job.jobId}`}
+                                        href={`/jobs/${job.jobId}`}
                                         target="_blank"
                                         className="font-medium text-primary hover:underline flex items-center gap-1"
                                     >

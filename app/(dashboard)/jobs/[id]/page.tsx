@@ -31,6 +31,7 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useParams } from 'next/navigation'
+import { JobTimeline } from '@/components/jobs/JobTimeline'
 
 const statusConfig: Record<JobStatus, {
     icon: React.ReactNode
@@ -112,47 +113,6 @@ const statusConfig: Record<JobStatus, {
     },
 }
 
-// Timeline item component with date displayed, relative time on hover
-function TimelineItem({
-    step,
-    label,
-    date,
-    isCompleted = false
-}: {
-    step: number | string
-    label: string
-    date: string
-    isCompleted?: boolean
-}) {
-    return (
-        <div className="flex items-start gap-3">
-            <div className={cn(
-                'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium',
-                isCompleted
-                    ? 'bg-teal-secondary text-gray-900'
-                    : 'bg-primary text-primary-foreground'
-            )}>
-                {step}
-            </div>
-            <div>
-                <p className="text-sm font-medium">{label}</p>
-                <TooltipProvider delayDuration={100}>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <p className="text-xs text-muted-foreground cursor-help">
-                                {formatDateTime(date)}
-                            </p>
-                        </TooltipTrigger>
-                        <TooltipContent side="right">
-                            <p>{formatRelativeTime(date)}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </div>
-        </div>
-    )
-}
-
 export default function JobDetailsPage() {
     const params = useParams()
     const jobId = Number(params.id)
@@ -176,7 +136,7 @@ export default function JobDetailsPage() {
             <div className="space-y-6">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" size="sm" asChild>
-                        <Link href="/torrents/jobs">
+                        <Link href="/jobs">
                             <ArrowLeft className="mr-2 h-4 w-4" />
                             Back to Jobs
                         </Link>
@@ -194,7 +154,7 @@ export default function JobDetailsPage() {
                                 Retry
                             </Button>
                             <Button asChild variant="outline" size="sm">
-                                <Link href="/torrents/jobs">Back to Jobs</Link>
+                                <Link href="/jobs">Back to Jobs</Link>
                             </Button>
                         </div>
                     </CardContent>
@@ -218,7 +178,7 @@ export default function JobDetailsPage() {
             {/* Header */}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" asChild>
-                    <Link href="/torrents/jobs">
+                    <Link href="/jobs">
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Jobs
                     </Link>
@@ -389,42 +349,7 @@ export default function JobDetailsPage() {
                     </Card>
 
                     {/* Timeline */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Timeline</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <TimelineItem
-                                    step={1}
-                                    label="Created"
-                                    date={job.createdAt}
-                                />
-                                {job.status !== JobStatus.QUEUED && job.startedAt && (
-                                    <TimelineItem
-                                        step={2}
-                                        label="Started Processing"
-                                        date={job.startedAt}
-                                    />
-                                )}
-                                {job.updatedAt && (
-                                    <TimelineItem
-                                        step={3}
-                                        label="Last Updated"
-                                        date={job.updatedAt}
-                                    />
-                                )}
-                                {job.status === JobStatus.COMPLETED && job.completedAt && (
-                                    <TimelineItem
-                                        step="✓"
-                                        label="Completed"
-                                        date={job.completedAt}
-                                        isCompleted
-                                    />
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <JobTimeline jobId={jobId} />
 
                     {/* Admin-Only Information */}
                     {session?.user?.role === UserRole.Admin && (
@@ -471,3 +396,4 @@ export default function JobDetailsPage() {
         </div>
     )
 }
+

@@ -116,7 +116,7 @@ export default function DashboardPage() {
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-auto flex-col gap-2 py-4">
-              <Link href="/torrents/jobs">
+              <Link href="/jobs">
                 <FolderOpen className="h-6 w-6" />
                 <span>View Jobs</span>
               </Link>

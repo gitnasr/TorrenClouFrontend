@@ -133,7 +133,7 @@ export function JobCard({ job, className }: JobCardProps) {
     ].includes(job.status)
 
     return (
-        <Link href={`/torrents/jobs/${job.id}`}>
+        <Link href={`/jobs/${job.id}`}>
             <div className={cn(
                 'group relative transition-all duration-200 hover:bg-surface-400/50',
                 'border-b border-surface-300/50',
@@ -241,7 +241,7 @@ export function JobList({
             <div className="flex items-center justify-between p-6 pb-4">
                 <h2 className="text-lg font-semibold">{title}</h2>
                 {showViewAll && jobs.length > 0 && (
-                    <Link href="/torrents/jobs" className="text-sm text-primary hover:underline">
+                    <Link href="/jobs" className="text-sm text-primary hover:underline">
                         View All
                     </Link>
                 )}

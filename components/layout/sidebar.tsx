@@ -31,9 +31,9 @@ const navigation: NavItem[] = [
     icon: Upload,
     children: [
       { name: 'Upload', href: '/torrents/upload' },
-      { name: 'My Jobs', href: '/torrents/jobs' },
     ],
   },
+  { name: 'Jobs', href: '/jobs', icon: FolderOpen },
   {
     name: 'Wallet',
     href: '/wallet',

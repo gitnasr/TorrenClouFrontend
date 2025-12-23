@@ -98,7 +98,7 @@ export function useInvoicePayment() {
             }
 
             // Navigate to jobs page
-            router.push('/torrents/jobs')
+            router.push('/jobs')
         },
         onError: (error) => {
             const message = handlePaymentError(error)

@@ -10,44 +10,16 @@ import { JobCard } from '@/components/jobs/job-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Pagination } from '@/components/ui/pagination'
 import { Upload, Search, TrendingUp, CheckCircle, XCircle, Clock, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
-import { useJobs } from '@/hooks/useJobs'
+import { useJobs, useJobStatistics } from '@/hooks/useJobs'
 import { useJobsStore } from '@/stores/jobsStore'
 import { JobStatus, UserRole } from '@/types/enums'
-import { filterJobsForUser, isStatusVisibleToUser } from '@/lib/utils/jobFilters'
+import { filterJobsForUser } from '@/lib/utils/jobFilters'
+import { statusLabels } from '@/types/jobs'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import { useEffect } from 'react'
 import type { UserJob } from '@/types/api'
 import type { Job } from '@/types/jobs'
-
-// Get status filters based on user role
-function getStatusFilters(userRole?: UserRole) {
-    const allFilters = [
-        { label: 'All', value: 'all' },
-        { label: 'Queued', value: JobStatus.QUEUED },
-        { label: 'Downloading', value: JobStatus.DOWNLOADING },
-        { label: 'Pending Upload', value: JobStatus.PENDING_UPLOAD },
-        { label: 'Uploading', value: JobStatus.UPLOADING },
-        { label: 'Retrying Download', value: JobStatus.TORRENT_DOWNLOAD_RETRY },
-        { label: 'Retrying Upload', value: JobStatus.UPLOAD_RETRY },
-        { label: 'Completed', value: JobStatus.COMPLETED },
-        { label: 'Failed', value: JobStatus.FAILED },
-        { label: 'Download Failed', value: JobStatus.TORRENT_FAILED },
-        { label: 'Upload Failed', value: JobStatus.UPLOAD_FAILED },
-        { label: 'Google Drive Failed', value: JobStatus.GOOGLE_DRIVE_FAILED },
-    ]
-
-    // Admin and Support see all filters
-    if (userRole === UserRole.Admin || userRole === UserRole.Support) {
-        return allFilters
-    }
-
-    // Regular users: filter out admin-only statuses
-    return allFilters.filter((filter) => {
-        if (filter.value === 'all') return true
-        return isStatusVisibleToUser(filter.value as JobStatus, userRole)
-    })
-}
 
 // Adapter function to convert Job to UserJob format for JobCard
 function toUserJob(job: Job): UserJob {
@@ -91,8 +63,9 @@ function JobsListContent() {
         reset
     } = useJobsStore()
 
-    // React Query hook for fetching jobs
+    // React Query hooks for fetching jobs list and statistics
     const { data, isLoading, error, refetch } = useJobs()
+    const { data: jobStats } = useJobStatistics()
 
     // Filter jobs based on user role
     const filteredJobs = useMemo(() => {
@@ -100,10 +73,28 @@ function JobsListContent() {
         return filterJobsForUser(data.items, session?.user?.role as UserRole | undefined)
     }, [data?.items, session?.user?.role])
 
-    // Get status filters based on user role
+    // Build status filters dynamically from backend statistics
     const statusFilters = useMemo(() => {
-        return getStatusFilters(session?.user?.role as UserRole | undefined)
-    }, [session?.user?.role])
+        // Always include an \"All\" option implemented purely on the frontend
+        const filters: { label: string; value: string }[] = [
+            { label: 'All', value: 'all' },
+        ]
+
+        if (!jobStats?.statusFilters) {
+            return filters
+        }
+
+        for (const sf of jobStats.statusFilters) {
+            const statusKey = sf.status as JobStatus
+            const baseLabel = statusLabels[statusKey] ?? sf.status
+            filters.push({
+                label: `${baseLabel} (${sf.count})`,
+                value: sf.status,
+            })
+        }
+
+        return filters
+    }, [jobStats?.statusFilters])
 
     // Sync URL params with store on mount
     useEffect(() => {
@@ -160,36 +151,13 @@ function JobsListContent() {
         updateFilters({ size, page: 1 })
     }
 
-    // Calculate stats from filtered jobs
-    const stats = useMemo(() => {
-        if (!filteredJobs.length) {
-            return {
-                total: 0,
-                active: 0,
-                completed: 0,
-                failed: 0,
-            }
-        }
-
-        return {
-            total: filteredJobs.length,
-            active: filteredJobs.filter((j) =>
-                j.status === JobStatus.QUEUED ||
-                j.status === JobStatus.DOWNLOADING ||
-                j.status === JobStatus.PENDING_UPLOAD ||
-                j.status === JobStatus.UPLOADING ||
-                j.status === JobStatus.TORRENT_DOWNLOAD_RETRY ||
-                j.status === JobStatus.UPLOAD_RETRY
-            ).length,
-            completed: filteredJobs.filter((j) => j.status === JobStatus.COMPLETED).length,
-            failed: filteredJobs.filter((j) =>
-                j.status === JobStatus.FAILED ||
-                j.status === JobStatus.TORRENT_FAILED ||
-                j.status === JobStatus.UPLOAD_FAILED ||
-                j.status === JobStatus.GOOGLE_DRIVE_FAILED
-            ).length,
-        }
-    }, [filteredJobs])
+    // Use backend statistics for global counts
+    const stats = {
+        total: jobStats?.totalJobs ?? 0,
+        active: jobStats?.activeJobs ?? 0,
+        completed: jobStats?.completedJobs ?? 0,
+        failed: jobStats?.failedJobs ?? 0,
+    }
 
     // Filter by search (client-side since API may not support search)
     const filteredItems = useMemo(() => {
@@ -392,3 +360,4 @@ export default function JobsListPage() {
         </Suspense>
     )
 }
+

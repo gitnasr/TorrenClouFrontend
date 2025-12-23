@@ -409,7 +409,7 @@ function PaidInvoiceView({ invoice }: { invoice: Invoice }) {
                                         Related Job
                                     </p>
                                     <Link
-                                        href={`/torrents/jobs/${invoice.jobId}`}
+                                        href={`/jobs/${invoice.jobId}`}
                                         className="font-medium mt-1 text-primary hover:underline"
                                     >
                                         Job #{invoice.jobId}

@@ -97,6 +97,11 @@ export const jobStatisticsSchema = z.object({
     completedJobs: z.number().int().nonnegative(),
     failedJobs: z.number().int().nonnegative(),
     downloadingJobs: z.number().int().nonnegative().optional(),
+    // Available filters for the current user, as returned by the backend
+    statusFilters: z.array(z.object({
+        status: jobStatusSchema,
+        count: z.number().int().nonnegative(),
+    })),
 })
 
 export const jobsQueryParamsSchema = z.object({
@@ -106,12 +111,68 @@ export const jobsQueryParamsSchema = z.object({
 })
 
 // ============================================
+// Timeline Types
+// ============================================
+
+export enum StatusChangeSource {
+    Worker = 'Worker',
+    User = 'User',
+    System = 'System',
+    Recovery = 'Recovery',
+}
+
+// Map of numeric enum values to string values (if backend sends numeric)
+const statusChangeSourceNumberMap: Record<number, string> = {
+    0: 'Worker',
+    1: 'User',
+    2: 'System',
+    3: 'Recovery',
+}
+
+// Schema for status change source with preprocessing to handle both string and numeric values
+export const statusChangeSourceSchema = z.preprocess(
+    (val) => {
+        // If it's a number, convert to string using the map
+        if (typeof val === 'number') {
+            return statusChangeSourceNumberMap[val] ?? val
+        }
+        // If it's a string that represents a number, convert it
+        if (typeof val === 'string' && /^\d+$/.test(val)) {
+            const numVal = parseInt(val, 10)
+            return statusChangeSourceNumberMap[numVal] ?? val
+        }
+        // If it's already a string, return as-is (case-insensitive matching)
+        if (typeof val === 'string') {
+            const upperVal = val.charAt(0).toUpperCase() + val.slice(1).toLowerCase()
+            if (['Worker', 'User', 'System', 'Recovery'].includes(upperVal)) {
+                return upperVal
+            }
+            return val
+        }
+        return val
+    },
+    z.enum(['Worker', 'User', 'System', 'Recovery'])
+)
+
+export const jobTimelineEntrySchema = z.object({
+    fromStatus: jobStatusSchema.nullable(),
+    toStatus: jobStatusSchema,
+    source: statusChangeSourceSchema,
+    sourceName: z.string(),
+    errorMessage: z.string().nullable(),
+    metadataJson: z.string().nullable(),
+    changedAt: z.string().datetime(),
+    durationFromPrevious: z.string().nullable(), // ISO 8601 duration format
+})
+
+// ============================================
 // Inferred Types from Schemas
 // ============================================
 
 export type Job = z.infer<typeof jobSchema>
 export type PaginatedJobs = z.infer<typeof paginatedJobsSchema>
 export type JobStatistics = z.infer<typeof jobStatisticsSchema>
+export type JobTimelineEntry = z.infer<typeof jobTimelineEntrySchema>
 
 // Manual type for query params (avoiding Zod default inference issues)
 export interface JobsQueryParams {

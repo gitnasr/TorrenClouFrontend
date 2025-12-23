@@ -13,8 +13,12 @@ export const routes = {
         upload: '/torrents/upload',
         analyze: '/torrents/analyze',
         quote: '/torrents/quote',
-        jobs: '/torrents/jobs',
-        jobDetails: (id: number | string) => `/torrents/jobs/${id}`,
+    },
+    
+    // Jobs routes
+    jobs: {
+        list: '/jobs',
+        details: (id: number | string) => `/jobs/${id}`,
     },
 
     // Wallet routes
@@ -53,7 +57,7 @@ export const routes = {
 export const userNavigation = [
     { name: 'Dashboard', href: routes.dashboard, icon: 'LayoutDashboard' },
     { name: 'Upload Torrent', href: routes.torrents.upload, icon: 'Upload' },
-    { name: 'My Jobs', href: routes.torrents.jobs, icon: 'FolderOpen' },
+    { name: 'My Jobs', href: routes.jobs.list, icon: 'FolderOpen' },
     { name: 'Wallet', href: routes.wallet.overview, icon: 'Wallet' },
     { name: 'Storage', href: routes.storage.profiles, icon: 'HardDrive' },
     { name: 'Invoices', href: routes.invoices.list, icon: 'FileText' },
@@ -71,6 +75,7 @@ export const adminNavigation = [
 export const protectedRoutes = [
     '/dashboard',
     '/torrents',
+    '/jobs',
     '/wallet',
     '/storage',
     '/invoices',
