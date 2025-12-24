@@ -20,7 +20,7 @@ import {
     AlertCircle,
     Cloud,
 } from 'lucide-react'
-import { formatFileSize, formatInfoHash, formatCurrency, calculateTorrentHealth, getTimeRemaining } from '@/lib/utils/formatters'
+import { formatFileSize, formatInfoHash, formatNCurrency, formatUSD, calculateTorrentHealth, getTimeRemaining } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -252,7 +252,7 @@ export default function TorrentAnalyzePage() {
                                     <span className="text-muted-foreground">
                                         Size ({quoteResult.pricingDetails.calculatedSizeInGb.toFixed(2)} GB × ${quoteResult.pricingDetails.baseRatePerGb}/GB)
                                     </span>
-                                    <span>{formatCurrency(quoteResult.pricingDetails.calculatedSizeInGb * quoteResult.pricingDetails.baseRatePerGb, 'USD')}</span>
+                                    <span>{formatUSD(quoteResult.pricingDetails.calculatedSizeInGb * quoteResult.pricingDetails.baseRatePerGb)}</span>
                                 </div>
                                 {quoteResult.pricingDetails.regionMultiplier !== 1 && (
                                     <div className="flex justify-between text-sm">
@@ -272,13 +272,13 @@ export default function TorrentAnalyzePage() {
                                             <Zap className="h-3.5 w-3.5 text-warning" />
                                             Cache discount
                                         </span>
-                                        <span className="text-teal-secondary">-{formatCurrency(quoteResult.pricingDetails.cacheDiscountAmount, 'USD')}</span>
+                                        <span className="text-teal-secondary">-{formatUSD(quoteResult.pricingDetails.cacheDiscountAmount)}</span>
                                     </div>
                                 )}
                                 <div className="border-t pt-3">
                                     <div className="flex justify-between">
                                         <span className="font-medium">Total</span>
-                                        <span className="text-2xl font-bold text-primary">{formatCurrency(quoteResult.finalAmountInUSD, 'USD')}</span>
+                                        <span className="text-2xl font-bold text-primary">{formatUSD(quoteResult.finalAmountInUSD)}</span>
                                     </div>
                                 </div>
                             </CardContent>
@@ -401,12 +401,12 @@ export default function TorrentAnalyzePage() {
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">Your balance</span>
                                         <span className="font-medium">
-                                            {isLoadingBalance ? '...' : formatCurrency(balance, 'USD')}
+                                            {isLoadingBalance ? '...' : formatNCurrency(balance)}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
                                         <span className="text-muted-foreground">Invoice amount</span>
-                                        <span className="font-medium">{formatCurrency(finalAmount, 'USD')}</span>
+                                        <span className="font-medium">{formatNCurrency(finalAmount)}</span>
                                     </div>
                                     <div className="flex items-center justify-between border-t pt-2">
                                         <span className="text-muted-foreground">Balance after</span>
@@ -414,7 +414,7 @@ export default function TorrentAnalyzePage() {
                                             'font-medium',
                                             hasInsufficientBalance ? 'text-sage' : 'text-teal-secondary'
                                         )}>
-                                            {formatCurrency(balance - finalAmount, 'USD')}
+                                            {formatNCurrency(balance - finalAmount)}
                                         </span>
                                     </div>
 
@@ -422,13 +422,13 @@ export default function TorrentAnalyzePage() {
                                         <div className="flex items-start gap-2 rounded-lg bg-sage/10 p-3 text-sm">
                                             <AlertCircle className="h-4 w-4 shrink-0 text-sage mt-0.5" />
                                             <p className="text-sage">
-                                                Insufficient balance. You need {formatCurrency(finalAmount - balance, 'USD')} more.
+                                                Insufficient balance. You need {formatNCurrency(finalAmount - balance)} more.
                                             </p>
                                         </div>
                                     )}
 
                                     <Button onClick={handlePay} className="w-full" size="lg">
-                                        {hasInsufficientBalance ? 'Add Funds to Pay' : `Pay ${formatCurrency(finalAmount, 'USD')}`}
+                                        {hasInsufficientBalance ? 'Add Funds to Pay' : `Pay ${formatNCurrency(finalAmount)}`}
                                     </Button>
                                 </>
                             )}
@@ -443,7 +443,7 @@ export default function TorrentAnalyzePage() {
                     <ModalHeader>
                         <ModalTitle>Confirm Payment</ModalTitle>
                         <ModalDescription>
-                            You are about to pay {formatCurrency(finalAmount, 'USD')} for this download.
+                            You are about to pay {formatNCurrency(finalAmount)} for this download.
                         </ModalDescription>
                     </ModalHeader>
                     <div className="space-y-2 py-4">
@@ -453,7 +453,7 @@ export default function TorrentAnalyzePage() {
                         </div>
                         <div className="flex justify-between text-sm">
                             <span>Amount</span>
-                            <span className="font-medium">{formatCurrency(finalAmount, 'USD')}</span>
+                            <span className="font-medium">{formatNCurrency(finalAmount)}</span>
                         </div>
                     </div>
                     <ModalFooter>
@@ -480,7 +480,7 @@ export default function TorrentAnalyzePage() {
                     <ModalHeader>
                         <ModalTitle>Insufficient Balance</ModalTitle>
                         <ModalDescription>
-                            You need {formatCurrency(finalAmount - balance, 'USD')} more to complete this payment.
+                            You need {formatNCurrency(finalAmount - balance)} more to complete this payment.
                         </ModalDescription>
                     </ModalHeader>
                     <ModalFooter>

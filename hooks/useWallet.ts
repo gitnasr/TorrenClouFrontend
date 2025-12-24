@@ -6,6 +6,7 @@ import {
     getWalletBalance,
     getWalletTransactions,
     getWalletTransaction,
+    getWalletTransactionFilters,
 } from '@/lib/api/wallet'
 import { getWalletErrorMessage } from '@/types/wallet'
 import type { PaginationParams } from '@/types/wallet'
@@ -20,9 +21,10 @@ export const walletKeys = {
     balance: () => [...walletKeys.all, 'balance'] as const,
     transactions: () => [...walletKeys.all, 'transactions'] as const,
     transactionsList: (params: PaginationParams) =>
-        [...walletKeys.transactions(), params] as const,
+        [...walletKeys.transactions(), 'list', params] as const,
     transaction: (id: number) =>
         [...walletKeys.transactions(), id] as const,
+    transactionFilters: () => [...walletKeys.transactions(), 'filters'] as const,
 }
 
 // ============================================
@@ -97,6 +99,21 @@ export function useWalletTransaction(id: number) {
         queryKey: walletKeys.transaction(id),
         queryFn: () => getWalletTransaction(id),
         enabled: status === 'authenticated' && id > 0,
+    })
+}
+
+/**
+ * Hook to fetch available transaction type filters for the current user
+ * Stale time: 60 seconds (filters don't change frequently)
+ */
+export function useWalletTransactionFilters() {
+    const { status } = useSession()
+
+    return useQuery({
+        queryKey: walletKeys.transactionFilters(),
+        queryFn: getWalletTransactionFilters,
+        enabled: status === 'authenticated',
+        staleTime: 60 * 1000, // 60 seconds
     })
 }
 

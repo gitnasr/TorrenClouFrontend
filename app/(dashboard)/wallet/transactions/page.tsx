@@ -21,7 +21,7 @@ import {
     AlertCircle,
 } from 'lucide-react'
 import { formatNCurrency, formatDateTime } from '@/lib/utils/formatters'
-import { useWalletTransactions } from '@/hooks/useWallet'
+import { useWalletTransactions, useWalletTransactionFilters } from '@/hooks/useWallet'
 import { TransactionType } from '@/types/enums'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -35,13 +35,18 @@ const transactionIcons: Record<TransactionType, React.ReactNode> = {
     [TransactionType.DEDUCTION]: <Minus className="h-4 w-4 text-plum" />,
 }
 
-const typeFilters = [
-    { label: 'All', value: 'all' },
-    { label: 'Deposits', value: TransactionType.DEPOSIT },
-    { label: 'Payments', value: TransactionType.PAYMENT },
-    { label: 'Refunds', value: TransactionType.REFUND },
-    { label: 'Adjustments', value: TransactionType.ADMIN_ADJUSTMENT },
-]
+// Helper to format transaction type label
+function formatTransactionTypeLabel(type: string): string {
+    const labelMap: Record<string, string> = {
+        'DEPOSIT': 'Deposits',
+        'PAYMENT': 'Payments',
+        'REFUND': 'Refunds',
+        'ADMIN_ADJUSTMENT': 'Adjustments',
+        'BONUS': 'Bonuses',
+        'DEDUCTION': 'Deductions',
+    }
+    return labelMap[type] || type.replace('_', ' ')
+}
 
 // Helper to map string type to enum
 function mapTransactionType(type: string): TransactionType {
@@ -92,10 +97,14 @@ function TransactionsContent() {
     const currentPage = parseInt(searchParams.get('page') || '1', 10)
     const pageSize = parseInt(searchParams.get('size') || '10', 10)
 
-    // Fetch transactions from API
+    // Fetch available filters from API
+    const { data: filtersData, isLoading: filtersLoading } = useWalletTransactionFilters()
+
+    // Fetch transactions from API with server-side filtering
     const { data, isLoading, error, refetch } = useWalletTransactions({
         pageNumber: currentPage,
         pageSize,
+        transactionType: typeFilter !== 'all' ? (typeFilter as TransactionType) : undefined,
     })
 
     // Update URL with filters
@@ -114,11 +123,8 @@ function TransactionsContent() {
         router.push(queryString ? `${pathname}?${queryString}` : pathname, { scroll: false })
     }
 
-    // Filter transactions by type (client-side for now, can be moved to server)
+    // Use transactions directly from API (server-side filtered)
     const transactions = data?.items || []
-    const filteredTransactions = transactions.filter((tx) => {
-        return typeFilter === 'all' || tx.type === typeFilter
-    })
 
     return (
         <div className="space-y-6">
@@ -156,23 +162,40 @@ function TransactionsContent() {
             {/* Filters */}
             <Card>
                 <CardContent className="flex flex-wrap gap-2 pt-6">
-                    {typeFilters.map((filter) => (
-                        <Button
-                            key={filter.value}
-                            variant={typeFilter === filter.value ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => updateFilters({ type: filter.value, page: 1 })}
-                        >
-                            {filter.label}
-                        </Button>
-                    ))}
+                    {/* "All" filter option */}
+                    <Button
+                        key="all"
+                        variant={typeFilter === 'all' ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => updateFilters({ type: 'all', page: 1 })}
+                    >
+                        All
+                    </Button>
+                    {/* Dynamic filters from API */}
+                    {filtersLoading ? (
+                        <Skeleton className="h-9 w-24" />
+                    ) : (
+                        filtersData?.map((filter) => (
+                            <Button
+                                key={filter.type}
+                                variant={typeFilter === filter.type ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => updateFilters({ type: filter.type, page: 1 })}
+                            >
+                                {formatTransactionTypeLabel(filter.type)}
+                                <Badge variant="secondary" className="ml-2">
+                                    {filter.count}
+                                </Badge>
+                            </Button>
+                        ))
+                    )}
                 </CardContent>
             </Card>
 
             {/* Transactions List */}
             {isLoading ? (
                 <TransactionsSkeleton />
-            ) : filteredTransactions.length === 0 ? (
+            ) : transactions.length === 0 ? (
                 <EmptyState
                     icon={Filter}
                     title="No transactions found"
@@ -184,7 +207,7 @@ function TransactionsContent() {
                 <Card>
                     <CardContent className="pt-6">
                         <div className="space-y-2">
-                            {filteredTransactions.map((tx) => {
+                            {transactions.map((tx) => {
                                 const txType = mapTransactionType(tx.type)
                                 return (
                                     <div

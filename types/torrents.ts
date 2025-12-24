@@ -69,6 +69,7 @@ export type TorrentInfo = z.infer<typeof torrentInfoSchema>
 
 export const pricingSnapshotSchema = z.object({
     totalSizeInBytes: z.number(),
+    totalSizeInGb: z.number(), // Computed property: totalSizeInBytes / 1_073_741_824.0
     calculatedSizeInGb: z.number(),
     selectedFiles: z.array(z.string()),
     baseRatePerGb: z.number(),

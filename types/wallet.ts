@@ -37,6 +37,17 @@ export const transactionTypeSchema = z.enum([
 export type TransactionTypeDto = z.infer<typeof transactionTypeSchema>
 
 // ============================================
+// Transaction Filter Schema
+// ============================================
+
+export const transactionFilterDtoSchema = z.object({
+    type: transactionTypeSchema,
+    count: z.number(),
+})
+
+export type TransactionFilterDto = z.infer<typeof transactionFilterDtoSchema>
+
+// ============================================
 // Wallet Balance Schema
 // ============================================
 
@@ -122,6 +133,7 @@ export type PaginatedAdminTransactions = z.infer<typeof paginatedAdminTransactio
 export interface PaginationParams {
     pageNumber?: number
     pageSize?: number
+    transactionType?: TransactionTypeDto
 }
 
 // ============================================
@@ -147,4 +159,107 @@ export const walletErrorMessages: Record<string, string> = {
 
 export function getWalletErrorMessage(code: string): string {
     return walletErrorMessages[code] || 'An unexpected error occurred. Please try again.'
+}
+
+// ============================================
+// Deposit Status Enum
+// ============================================
+
+export const depositStatusSchema = z.enum([
+    'Pending',
+    'Completed',
+    'Failed',
+    'Expired',
+])
+
+export type DepositStatusDto = z.infer<typeof depositStatusSchema>
+
+// ============================================
+// Crypto Deposit Request Schema
+// ============================================
+
+export const cryptoDepositRequestSchema = z.object({
+    amount: z.number().min(1, 'Minimum amount is $1').max(10000, 'Maximum amount is $10,000'),
+    currency: z.enum(['USDT', 'USDC', 'DAI', 'LTC']),
+})
+
+export type CryptoDepositRequestDto = z.infer<typeof cryptoDepositRequestSchema>
+
+// ============================================
+// Crypto Deposit Response Schema
+// ============================================
+
+export const cryptoDepositResponseSchema = z.object({
+    url: z.string().url(),
+})
+
+export type CryptoDepositResponse = z.infer<typeof cryptoDepositResponseSchema>
+
+// ============================================
+// Deposit DTO Schema
+// ============================================
+
+export const depositDtoSchema = z.object({
+    id: z.number(),
+    amount: z.number(),
+    currency: z.string(),
+    paymentProvider: z.string(),
+    paymentUrl: z.string().nullable().optional(),
+    status: depositStatusSchema,
+    createdAt: z.string(),
+    updatedAt: z.string().nullable().optional(),
+})
+
+export type DepositDto = z.infer<typeof depositDtoSchema>
+
+// ============================================
+// Paginated Deposits Schema
+// ============================================
+
+export const paginatedDepositsSchema = createPaginatedSchema(depositDtoSchema)
+
+export type PaginatedDeposits = z.infer<typeof paginatedDepositsSchema>
+
+// ============================================
+// Stablecoin Minimum Amount Schema
+// ============================================
+
+export const stablecoinMinAmountDtoSchema = z.object({
+    currency: z.string(),
+    minAmount: z.number(),
+    fiatEquivalent: z.string(),
+})
+
+export type StablecoinMinAmountDto = z.infer<typeof stablecoinMinAmountDtoSchema>
+
+// ============================================
+// Stablecoin Minimum Amounts Response Schema
+// ============================================
+
+export const stablecoinMinimumAmountsResponseSchema = z.object({
+    stablecoins: z.array(stablecoinMinAmountDtoSchema),
+})
+
+export type StablecoinMinimumAmountsResponse = z.infer<typeof stablecoinMinimumAmountsResponseSchema>
+
+// ============================================
+// Payment Error Codes and Messages
+// ============================================
+
+export const paymentErrorMessages: Record<string, string> = {
+    // Deposit errors
+    INVALID_AMOUNT: 'Amount must be between $1 and $10,000',
+    INVALID_CURRENCY: 'Invalid cryptocurrency selected',
+    DEPOSIT_NOT_FOUND: 'Deposit not found',
+    DEPOSIT_EXPIRED: 'This deposit has expired. Please create a new one.',
+    DEPOSIT_FAILED: 'Deposit failed. Please try again.',
+    
+    // General errors
+    UNAUTHORIZED: 'Please log in to continue',
+    NOT_FOUND: 'Resource not found',
+    VALIDATION_ERROR: 'Please check your input and try again',
+}
+
+export function getPaymentErrorMessage(code: string): string {
+    return paymentErrorMessages[code] || walletErrorMessages[code] || 'An unexpected error occurred. Please try again.'
 }

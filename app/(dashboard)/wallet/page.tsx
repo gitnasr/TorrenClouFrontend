@@ -8,17 +8,18 @@ import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Receipt, ArrowDownLeft, ArrowUpRight, AlertCircle } from 'lucide-react'
 import { formatCurrency, formatRelativeTime } from '@/lib/utils/formatters'
-import { mockDeposits } from '@/lib/mockData'
-import { DepositStatus, TransactionType } from '@/types/enums'
+import { TransactionType } from '@/types/enums'
 import { useWalletBalance, useWalletTransactions } from '@/hooks/useWallet'
+import { useDeposits } from '@/hooks/usePayments'
 import type { WalletTransaction } from '@/types/api'
+import type { DepositStatusDto } from '@/types/wallet'
 import Link from 'next/link'
 
-const depositBadgeVariants: Record<DepositStatus, 'default' | 'warning' | 'destructive' | 'secondary'> = {
-    [DepositStatus.Pending]: 'warning',
-    [DepositStatus.Completed]: 'default',
-    [DepositStatus.Failed]: 'destructive',
-    [DepositStatus.Expired]: 'destructive',
+const depositBadgeVariants: Record<DepositStatusDto, 'default' | 'warning' | 'destructive' | 'secondary' | 'success'> = {
+    'Pending': 'warning',
+    'Completed': 'success',
+    'Failed': 'destructive',
+    'Expired': 'destructive',
 }
 
 // Helper to convert API transaction type string to enum
@@ -93,12 +94,37 @@ function TransactionsSkeleton() {
     )
 }
 
+function DepositsSkeleton() {
+    return (
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-4 w-16" />
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-3">
+                    {[1, 2, 3].map((i) => (
+                        <div key={i} className="flex items-center justify-between rounded-lg border p-3">
+                            <div className="space-y-1">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                            <Skeleton className="h-5 w-16" />
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    )
+}
+
 export default function WalletPage() {
     const { data: balanceData, isLoading: isLoadingBalance, error: balanceError } = useWalletBalance()
     const { data: transactionsData, isLoading: isLoadingTransactions, error: transactionsError } = useWalletTransactions({ pageSize: 5 })
+    const { data: depositsData, isLoading: isLoadingDeposits, error: depositsError } = useDeposits({ pageSize: 3 })
 
-    // Still using mock deposits until deposit API is integrated
-    const recentDeposits = mockDeposits.slice(0, 3)
+    // Get recent deposits from API
+    const recentDeposits = depositsData?.items || []
 
     // Calculate total deposits and spent from transactions
     const transactions = transactionsData?.items || []
@@ -224,43 +250,51 @@ export default function WalletPage() {
                 )}
 
                 {/* Recent Deposits */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-base font-medium">Recent Deposits</CardTitle>
-                        <Link href="/wallet/deposits" className="text-sm text-primary hover:underline">
-                            View All
-                        </Link>
-                    </CardHeader>
-                    <CardContent>
-                        {recentDeposits.length === 0 ? (
-                            <p className="py-4 text-center text-sm text-muted-foreground">
-                                No deposits yet
-                            </p>
-                        ) : (
-                            <div className="space-y-3">
-                                {recentDeposits.map((deposit) => (
-                                    <Link
-                                        key={deposit.id}
-                                        href={`/wallet/deposits/${deposit.id}`}
-                                        className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
-                                    >
-                                        <div className="space-y-0.5">
-                                            <p className="text-sm font-medium">
-                                                {formatCurrency(deposit.amount)} {deposit.currency}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {formatRelativeTime(deposit.createdAt)}
-                                            </p>
-                                        </div>
-                                        <Badge variant={depositBadgeVariants[deposit.status]}>
-                                            {deposit.status}
-                                        </Badge>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
+                {isLoadingDeposits ? (
+                    <DepositsSkeleton />
+                ) : (
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-base font-medium">Recent Deposits</CardTitle>
+                            <Link href="/wallet/deposits" className="text-sm text-primary hover:underline">
+                                View All
+                            </Link>
+                        </CardHeader>
+                        <CardContent>
+                            {depositsError ? (
+                                <p className="py-4 text-center text-sm text-destructive">
+                                    Failed to load deposits
+                                </p>
+                            ) : recentDeposits.length === 0 ? (
+                                <p className="py-4 text-center text-sm text-muted-foreground">
+                                    No deposits yet
+                                </p>
+                            ) : (
+                                <div className="space-y-3">
+                                    {recentDeposits.map((deposit) => (
+                                        <Link
+                                            key={deposit.id}
+                                            href={`/wallet/deposits/${deposit.id}`}
+                                            className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="space-y-0.5">
+                                                <p className="text-sm font-medium">
+                                                    {formatCurrency(deposit.amount)} {deposit.currency}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {formatRelativeTime(deposit.createdAt)}
+                                                </p>
+                                            </div>
+                                            <Badge variant={depositBadgeVariants[deposit.status]}>
+                                                {deposit.status}
+                                            </Badge>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </div>
     )

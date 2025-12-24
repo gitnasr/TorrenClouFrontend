@@ -1,55 +1,134 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { ArrowLeft, Wallet, Info, Loader2, ArrowRight, TrendingUp } from 'lucide-react'
-import { formatNCurrency, formatExchangeRate, CURRENT_EXCHANGE_RATE, usdToN } from '@/lib/utils/formatters'
-import { stablecoinMinAmounts } from '@/lib/mockData'
-import { toast } from 'sonner'
+import { Skeleton } from '@/components/ui/skeleton'
+import { ArrowLeft, Wallet, Info, Loader2, ArrowRight, TrendingUp, AlertCircle } from 'lucide-react'
+import { formatNCurrency, formatExchangeRate, CHARGING_EXCHANGE_RATE, usdToN } from '@/lib/utils/formatters'
+import { useStablecoinMinimumAmounts, useCryptoDeposit } from '@/hooks/usePayments'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import type { CryptoDepositRequestDto } from '@/types/wallet'
 
-const currencies = [
-    { value: 'USDT', label: 'USDT (Tether)', network: 'TRC20/ERC20' },
-    { value: 'USDC', label: 'USDC (USD Coin)', network: 'ERC20' },
-    { value: 'BUSD', label: 'BUSD (Binance USD)', network: 'BEP20' },
-    { value: 'DAI', label: 'DAI (MakerDAO)', network: 'ERC20' },
-]
+// Supported currencies with their display info
+const currencyInfo: Record<string, { label: string; network: string }> = {
+    'USDT': { label: 'USDT (Tether)', network: 'TRC20/ERC20' },
+    'USDC': { label: 'USDC (USD Coin)', network: 'ERC20' },
+    'DAI': { label: 'DAI (MakerDAO)', network: 'ERC20' },
+    'LTC': { label: 'LTC (Litecoin)', network: 'Litecoin Network' },
+}
 
 export default function NewDepositPage() {
-    const router = useRouter()
     const [amount, setAmount] = useState('')
-    const [currency, setCurrency] = useState('USDT')
-    const [isCreating, setIsCreating] = useState(false)
+    const [currency, setCurrency] = useState<'USDT' | 'USDC' | 'DAI' | 'LTC'>('USDT')
 
-    // Current exchange rate (in production this comes from API)
-    const exchangeRate = CURRENT_EXCHANGE_RATE
+    // Fetch stablecoin minimum amounts from API
+    const { 
+        data: stablecoinData, 
+        isLoading: isLoadingStablecoins, 
+        error: stablecoinError 
+    } = useStablecoinMinimumAmounts()
 
-    const selectedMinAmount = stablecoinMinAmounts.find((s) => s.currency === currency)
-    const minAmount = selectedMinAmount?.minAmount || 10
-    const isValidAmount = Number(amount) >= minAmount
+    // Crypto deposit mutation
+    const cryptoDeposit = useCryptoDeposit()
+
+    // Current exchange rate (1 N = 1 USD for charging)
+    const exchangeRate = CHARGING_EXCHANGE_RATE
+
+    // Get available currencies from API response
+    const availableCurrencies = useMemo(() => {
+        if (!stablecoinData?.stablecoins) return []
+        return stablecoinData.stablecoins.map(coin => ({
+            value: coin.currency,
+            label: currencyInfo[coin.currency]?.label || coin.currency,
+            network: currencyInfo[coin.currency]?.network || '',
+            minAmount: coin.minAmount,
+        }))
+    }, [stablecoinData])
+
+    // Get minimum amount for selected currency
+    const minAmount = useMemo(() => {
+        const coin = stablecoinData?.stablecoins.find(s => s.currency === currency)
+        return coin?.minAmount || 1
+    }, [stablecoinData, currency])
+
+    const maxAmount = 10000
+    const numericAmount = Number(amount) || 0
+    const isValidAmount = numericAmount >= minAmount && numericAmount <= maxAmount
 
     // Calculate N coins user will receive
-    const nCoinsReceived = usdToN(Number(amount) || 0, exchangeRate)
+    const nCoinsReceived = usdToN(numericAmount, exchangeRate)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
-        if (!amount || Number(amount) < minAmount) {
-            toast.error(`Minimum deposit is $${minAmount} USD`)
+        if (!isValidAmount) {
             return
         }
 
-        setIsCreating(true)
+        const request: CryptoDepositRequestDto = {
+            amount: numericAmount,
+            currency,
+        }
 
-        // Simulate API call
-        await new Promise((resolve) => setTimeout(resolve, 1500))
+        cryptoDeposit.mutate(request)
+    }
 
-        toast.success(`Deposit created! You'll receive ${formatNCurrency(nCoinsReceived)}`)
-        router.push('/wallet/deposits/3') // Navigate to pending deposit
+    // Loading state for stablecoin data
+    if (isLoadingStablecoins) {
+        return (
+            <div className="mx-auto max-w-2xl space-y-6">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/wallet">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
+                        </Link>
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold">Buy N Coins</h1>
+                        <p className="text-muted-foreground">Convert stablecoins to N virtual currency</p>
+                    </div>
+                </div>
+                <Card>
+                    <CardContent className="pt-6 space-y-4">
+                        <Skeleton className="h-24 w-full" />
+                        <Skeleton className="h-32 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                    </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    // Error state
+    if (stablecoinError) {
+        return (
+            <div className="mx-auto max-w-2xl space-y-6">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="sm" asChild>
+                        <Link href="/wallet">
+                            <ArrowLeft className="mr-2 h-4 w-4" />
+                            Back
+                        </Link>
+                    </Button>
+                    <div>
+                        <h1 className="text-2xl font-bold">Buy N Coins</h1>
+                        <p className="text-muted-foreground">Convert stablecoins to N virtual currency</p>
+                    </div>
+                </div>
+                <Card className="border-destructive bg-destructive/10">
+                    <CardContent className="flex items-center gap-3 pt-6">
+                        <AlertCircle className="h-5 w-5 text-destructive" />
+                        <p className="text-destructive">
+                            Failed to load payment options. Please try again later.
+                        </p>
+                    </CardContent>
+                </Card>
+            </div>
+        )
     }
 
     return (
@@ -102,11 +181,11 @@ export default function NewDepositPage() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Select Stablecoin</label>
                             <div className="grid gap-2 sm:grid-cols-2">
-                                {currencies.map((curr) => (
+                                {availableCurrencies.map((curr) => (
                                     <button
                                         key={curr.value}
                                         type="button"
-                                        onClick={() => setCurrency(curr.value)}
+                                        onClick={() => setCurrency(curr.value as 'USDT' | 'USDC' | 'DAI' | 'LTC')}
                                         className={cn(
                                             'flex flex-col items-start rounded-lg border p-3 text-left transition-colors',
                                             currency === curr.value
@@ -115,7 +194,9 @@ export default function NewDepositPage() {
                                         )}
                                     >
                                         <span className="font-medium">{curr.label}</span>
-                                        <span className="text-xs text-muted-foreground">{curr.network}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                            {curr.network} • Min: ${curr.minAmount}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -133,11 +214,12 @@ export default function NewDepositPage() {
                                     onChange={(e) => setAmount(e.target.value)}
                                     className="pl-7 text-lg"
                                     min={minAmount}
+                                    max={maxAmount}
                                     step="0.01"
                                 />
                             </div>
                             <p className="text-sm text-muted-foreground">
-                                Minimum: ${minAmount} USD
+                                Min: ${minAmount} USD • Max: ${maxAmount.toLocaleString()} USD
                             </p>
                         </div>
 
@@ -153,6 +235,7 @@ export default function NewDepositPage() {
                                         size="sm"
                                         onClick={() => setAmount(String(amt))}
                                         className={cn(amount === String(amt) && 'border-primary')}
+                                        disabled={amt < minAmount}
                                     >
                                         ${amt}
                                     </Button>
@@ -161,11 +244,11 @@ export default function NewDepositPage() {
                         </div>
 
                         {/* Conversion Summary */}
-                        {amount && (
+                        {amount && numericAmount > 0 && (
                             <div className="rounded-lg bg-muted p-4 space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="text-center">
-                                        <p className="text-2xl font-bold">${Number(amount).toFixed(2)}</p>
+                                        <p className="text-2xl font-bold">${numericAmount.toFixed(2)}</p>
                                         <p className="text-xs text-muted-foreground">{currency}</p>
                                     </div>
                                     <ArrowRight className="h-6 w-6 text-muted-foreground" />
@@ -177,7 +260,7 @@ export default function NewDepositPage() {
                                 <div className="border-t pt-3 space-y-1">
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Deposit Amount</span>
-                                        <span>${Number(amount).toFixed(2)} {currency}</span>
+                                        <span>${numericAmount.toFixed(2)} {currency}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
                                         <span className="text-muted-foreground">Exchange Rate</span>
@@ -195,9 +278,9 @@ export default function NewDepositPage() {
                             type="submit"
                             className="w-full"
                             size="lg"
-                            disabled={!isValidAmount || isCreating}
+                            disabled={!isValidAmount || cryptoDeposit.isPending}
                         >
-                            {isCreating ? (
+                            {cryptoDeposit.isPending ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Creating Deposit...
@@ -228,4 +311,3 @@ export default function NewDepositPage() {
         </div>
     )
 }
-

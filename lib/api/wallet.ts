@@ -4,14 +4,16 @@ import {
     walletBalanceDtoSchema,
     walletTransactionDtoSchema,
     paginatedWalletTransactionsSchema,
+    transactionFilterDtoSchema,
     type WalletBalanceDto,
     type WalletTransactionDto,
     type PaginatedWalletTransactions,
     type PaginationParams,
+    type TransactionFilterDto,
 } from '@/types/wallet'
 
 // Re-export types for convenience
-export type { WalletBalanceDto, WalletTransactionDto, PaginatedWalletTransactions }
+export type { WalletBalanceDto, WalletTransactionDto, PaginatedWalletTransactions, TransactionFilterDto }
 
 /**
  * Get the current user's wallet balance
@@ -26,16 +28,22 @@ export async function getWalletBalance(): Promise<WalletBalanceDto> {
  * Get the current user's wallet transactions (paginated)
  * GET /api/finance/wallet/transactions (authenticated)
  * 
- * @param params - Pagination parameters
+ * @param params - Pagination parameters and optional transaction type filter
  * @returns Paginated list of transactions
  */
 export async function getWalletTransactions(
     params: PaginationParams = {}
 ): Promise<PaginatedWalletTransactions> {
-    const { pageNumber = 1, pageSize = 10 } = params
+    const { pageNumber = 1, pageSize = 10, transactionType } = params
+    const queryParams: Record<string, string | number> = { pageNumber, pageSize }
+    
+    if (transactionType) {
+        queryParams.transactionType = transactionType
+    }
+    
     const response = await apiClient.get<PaginatedWalletTransactions>(
         '/finance/wallet/transactions',
-        { params: { pageNumber, pageSize } }
+        { params: queryParams }
     )
     return paginatedWalletTransactionsSchema.parse(response.data)
 }
@@ -52,4 +60,21 @@ export async function getWalletTransaction(id: number): Promise<WalletTransactio
         `/finance/wallet/transactions/${id}`
     )
     return walletTransactionDtoSchema.parse(response.data)
+}
+
+/**
+ * Get available transaction type filters for the current user
+ * GET /api/finance/wallet/transactions/filters (authenticated)
+ * 
+ * @returns Array of transaction types with counts (only types with count > 0)
+ */
+export async function getWalletTransactionFilters(): Promise<TransactionFilterDto[]> {
+    const response = await apiClient.get<{ success: boolean; data: TransactionFilterDto[] } | TransactionFilterDto[]>(
+        '/finance/wallet/transactions/filters'
+    )
+    // Handle both wrapped response format {success, data} and direct array format
+    const data = Array.isArray(response.data) 
+        ? response.data 
+        : (response.data as { success: boolean; data: TransactionFilterDto[] }).data || []
+    return data.map(item => transactionFilterDtoSchema.parse(item))
 }

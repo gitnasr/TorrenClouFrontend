@@ -1,9 +1,20 @@
 // Invoices types and Zod schemas
 import { z } from 'zod'
+import { pricingSnapshotSchema } from './torrents'
 
 // ============================================
 // Zod Schemas
 // ============================================
+
+// Voucher DTO Schema
+export const voucherDtoSchema = z.object({
+    code: z.string(),
+    type: z.enum(['Percentage', 'FixedAmount']),
+    value: z.number().min(0),
+    discountAmount: z.number().min(0),
+})
+
+export type VoucherDto = z.infer<typeof voucherDtoSchema>
 
 export const invoiceSchema = z.object({
     id: z.number().int().positive(),
@@ -21,6 +32,18 @@ export const invoiceSchema = z.object({
     expiresAt: z.string(),
     createdAt: z.string(),
     updatedAt: z.string().nullable(),
+    // Pricing snapshot from backend (parsed from PricingSnapshotJson)
+    // Keep pricingSnapshot for backward compatibility (optional since API now uses pricingDetails)
+    pricingSnapshot: pricingSnapshotSchema.nullable().optional(),
+    // New pricing details field (same as pricingSnapshot, but using new naming)
+    pricingDetails: pricingSnapshotSchema.nullable().optional(),
+    // Voucher information
+    voucher: voucherDtoSchema.nullable().optional(),
+    voucherDiscountAmount: z.number().min(0).optional(),
+    // Pricing calculation breakdown
+    basePrice: z.number().min(0).optional(), // Price before health multiplier
+    priceAfterHealth: z.number().min(0).optional(), // Price after health multiplier, before voucher
+    minimumChargeApplied: z.boolean().optional(), // Whether $0.20 minimum charge was enforced
     // Computed properties from backend
     isPaid: z.boolean(),
     isCancelled: z.boolean(),
