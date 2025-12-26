@@ -1,12 +1,25 @@
 'use client'
 
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
-import { getJobs, getJob, getJobStatistics, getJobTimeline } from '@/lib/api/jobs'
+import { toast } from 'sonner'
+import { AxiosError } from 'axios'
+import {
+    getJobs,
+    getJob,
+    getJobStatistics,
+    getJobTimeline,
+    retryJob,
+    cancelJob,
+    refundJob,
+    adminRetryJob,
+    adminCancelJob,
+} from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
 import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics, JobTimelineEntry } from '@/types/jobs'
-import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema } from '@/types/jobs'
+import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema, getJobsErrorMessage } from '@/types/jobs'
 import { z } from 'zod'
+import { walletKeys } from './useWallet'
 
 // ============================================
 // Query Keys
@@ -174,5 +187,141 @@ export function usePrefetchNextPage() {
             })
         }
     }
+}
+
+// ============================================
+// Error Handler
+// ============================================
+
+interface ApiErrorResponse {
+    isSuccess: boolean
+    error?: {
+        code: string
+        message: string
+    }
+}
+
+function handleJobActionError(error: unknown): string {
+    if (error instanceof AxiosError && error.response?.data) {
+        const data = error.response.data as ApiErrorResponse
+        if (data.error?.code) {
+            return getJobsErrorMessage(data.error.code, data.error.message)
+        }
+        if (data.error?.message) {
+            return data.error.message
+        }
+    }
+    if (error instanceof Error) {
+        return error.message
+    }
+    return 'An unexpected error occurred'
+}
+
+// ============================================
+// Job Action Mutation Hooks
+// ============================================
+
+/**
+ * Hook for retrying a failed job (user endpoint)
+ */
+export function useRetryJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: retryJob,
+        onSuccess: (_data, jobId) => {
+            // Invalidate job queries to refresh data
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+            toast.success('Job retry initiated successfully')
+        },
+        onError: (error) => {
+            const message = handleJobActionError(error)
+            toast.error('Failed to retry job', { description: message })
+        },
+    })
+}
+
+/**
+ * Hook for cancelling an active job (user endpoint)
+ */
+export function useCancelJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: cancelJob,
+        onSuccess: (_data, jobId) => {
+            // Invalidate job queries to refresh data
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+            // Also invalidate wallet balance as refund may have been processed
+            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
+            toast.success('Job cancelled successfully. Refund processed automatically.')
+        },
+        onError: (error) => {
+            const message = handleJobActionError(error)
+            toast.error('Failed to cancel job', { description: message })
+        },
+    })
+}
+
+/**
+ * Hook for requesting a refund for a failed job (user endpoint)
+ */
+export function useRefundJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: refundJob,
+        onSuccess: (_data, jobId) => {
+            // Invalidate job queries to refresh data
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+            // Also invalidate wallet balance as refund has been added
+            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
+            toast.success('Refund processed successfully')
+        },
+        onError: (error) => {
+            const message = handleJobActionError(error)
+            toast.error('Failed to process refund', { description: message })
+        },
+    })
+}
+
+/**
+ * Hook for retrying any user's failed job (admin endpoint)
+ */
+export function useAdminRetryJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: adminRetryJob,
+        onSuccess: (_data, jobId) => {
+            // Invalidate job queries to refresh data
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+            toast.success('Job retry initiated successfully (Admin)')
+        },
+        onError: (error) => {
+            const message = handleJobActionError(error)
+            toast.error('Failed to retry job', { description: message })
+        },
+    })
+}
+
+/**
+ * Hook for cancelling any user's active job (admin endpoint)
+ */
+export function useAdminCancelJob() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: adminCancelJob,
+        onSuccess: (_data, jobId) => {
+            // Invalidate job queries to refresh data
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+            toast.success('Job cancelled successfully (Admin)')
+        },
+        onError: (error) => {
+            const message = handleJobActionError(error)
+            toast.error('Failed to cancel job', { description: message })
+        },
+    })
 }
 

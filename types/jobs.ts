@@ -79,6 +79,11 @@ export const jobSchema = z.object({
     completedAt: z.string().datetime().nullable().optional(),
     progressPercentage: z.number().min(0).max(100),
     isActive: z.boolean(),
+    // Refund and action state properties
+    isRefunded: z.boolean().optional().default(false),
+    canRetry: z.boolean().optional().default(false),
+    canCancel: z.boolean().optional().default(false),
+    canRefund: z.boolean().optional().default(false),
 })
 
 export const paginatedJobsSchema = z.object({
@@ -240,9 +245,29 @@ export const statusLabels: Record<JobStatus, string> = {
 // ============================================
 
 export const jobsErrorMessages: Record<string, string> = {
+    // General errors
     'NOT_FOUND': 'Job not found.',
-    'UNAUTHORIZED': 'You are not authorized to view this job.',
+    'JOB_NOT_FOUND': 'Job not found.',
+    'UNAUTHORIZED': 'You are not authorized to perform this action.',
     'FETCH_ERROR': 'Failed to fetch jobs. Please try again.',
+    
+    // Retry errors
+    'JOB_COMPLETED': 'Cannot retry a completed job.',
+    'JOB_CANCELLED': 'Cannot retry a cancelled job.',
+    'JOB_REFUNDED': 'Cannot retry a refunded job.',
+    'JOB_ACTIVE': 'Job is currently active. Wait for it to complete or fail before retrying.',
+    'STORAGE_INACTIVE': 'The storage profile for this job is no longer active.',
+    
+    // Cancel errors
+    'JOB_ALREADY_CANCELLED': 'This job has already been cancelled.',
+    'JOB_NOT_CANCELLABLE': 'This job cannot be cancelled in its current state.',
+    
+    // Refund errors
+    'JOB_NOT_FAILED': 'Only failed jobs can be refunded.',
+    'JOB_ALREADY_REFUNDED': 'This job has already been refunded.',
+    'INVOICE_NOT_FOUND': 'Invoice not found for this job.',
+    'INVOICE_NOT_PAID': 'Cannot refund an unpaid invoice.',
+    'INVOICE_ALREADY_REFUNDED': 'This invoice has already been refunded.',
 }
 
 export function getJobsErrorMessage(code: string, fallback?: string): string {

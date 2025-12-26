@@ -198,6 +198,9 @@ export function JobCard({ job, className }: JobCardProps) {
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Badge variant={config.badgeVariant}>{config.label}</Badge>
+                                    {job.isRefunded && (
+                                        <Badge variant="secondary">Refunded</Badge>
+                                    )}
                                     <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                 </div>
                             </div>

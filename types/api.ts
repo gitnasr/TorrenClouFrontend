@@ -263,6 +263,11 @@ export interface UserJob {
   fileName?: string
   storageProfileName?: string
   createdAt?: string
+  // Refund and action state properties
+  isRefunded?: boolean
+  canRetry?: boolean
+  canCancel?: boolean
+  canRefund?: boolean
 }
 
 export interface JobCreationResult {

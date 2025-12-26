@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +17,9 @@ import {
     RefreshCcw,
     AlertCircle,
     Loader2,
-    Cloud
+    Cloud,
+    DollarSign,
+    StopCircle,
 } from 'lucide-react'
 import { formatFileSize, formatDateTime, formatRelativeTime } from '@/lib/utils/formatters'
 import {
@@ -25,7 +28,22 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { useJob } from '@/hooks/useJobs'
+import {
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalFooter,
+    ModalTitle,
+    ModalDescription,
+} from '@/components/ui/modal'
+import {
+    useJob,
+    useRetryJob,
+    useCancelJob,
+    useRefundJob,
+    useAdminRetryJob,
+    useAdminCancelJob,
+} from '@/hooks/useJobs'
 import { JobStatus, UserRole } from '@/types/enums'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
@@ -118,8 +136,52 @@ export default function JobDetailsPage() {
     const jobId = Number(params.id)
     const { data: session } = useSession()
 
+    // State for confirmation dialogs
+    const [showCancelModal, setShowCancelModal] = useState(false)
+    const [showRefundModal, setShowRefundModal] = useState(false)
+
     // Use React Query hook to fetch job details
     const { data: job, isLoading, error, refetch } = useJob(jobId)
+
+    // Mutation hooks - use admin endpoints if user is admin
+    const isAdmin = session?.user?.role === UserRole.Admin
+    const retryJobMutation = useRetryJob()
+    const cancelJobMutation = useCancelJob()
+    const refundJobMutation = useRefundJob()
+    const adminRetryJobMutation = useAdminRetryJob()
+    const adminCancelJobMutation = useAdminCancelJob()
+
+    // Use admin or user mutations based on role
+    const handleRetry = () => {
+        if (isAdmin) {
+            adminRetryJobMutation.mutate(jobId)
+        } else {
+            retryJobMutation.mutate(jobId)
+        }
+    }
+
+    const handleCancel = () => {
+        if (isAdmin) {
+            adminCancelJobMutation.mutate(jobId, {
+                onSuccess: () => setShowCancelModal(false),
+            })
+        } else {
+            cancelJobMutation.mutate(jobId, {
+                onSuccess: () => setShowCancelModal(false),
+            })
+        }
+    }
+
+    const handleRefund = () => {
+        refundJobMutation.mutate(jobId, {
+            onSuccess: () => setShowRefundModal(false),
+        })
+    }
+
+    // Check if any mutation is pending
+    const isRetrying = retryJobMutation.isPending || adminRetryJobMutation.isPending
+    const isCancelling = cancelJobMutation.isPending || adminCancelJobMutation.isPending
+    const isRefunding = refundJobMutation.isPending
 
     // Loading state
     if (isLoading) {
@@ -195,9 +257,91 @@ export default function JobDetailsPage() {
                     )}
                 </div>
                 <div className="flex flex-col items-end gap-2">
-                    <Badge variant={config.badgeVariant} className="text-sm">
-                        {config.label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge variant={config.badgeVariant} className="text-sm">
+                            {config.label}
+                        </Badge>
+                        {job.isRefunded && (
+                            <Badge variant="secondary" className="text-sm">
+                                Refunded
+                            </Badge>
+                        )}
+                    </div>
+                    {/* Action Buttons */}
+                    <div className="flex gap-2">
+                        {job.canRetry && (
+                            <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleRetry}
+                                            disabled={isRetrying}
+                                        >
+                                            {isRetrying ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <RefreshCcw className="mr-2 h-4 w-4" />
+                                            )}
+                                            Retry
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Retry this job from its current phase</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        {job.canCancel && (
+                            <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={() => setShowCancelModal(true)}
+                                            disabled={isCancelling}
+                                        >
+                                            {isCancelling ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <StopCircle className="mr-2 h-4 w-4" />
+                                            )}
+                                            Cancel
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Cancel this job and receive a refund</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                        {job.canRefund && (
+                            <TooltipProvider delayDuration={100}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setShowRefundModal(true)}
+                                            disabled={isRefunding}
+                                        >
+                                            {isRefunding ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <DollarSign className="mr-2 h-4 w-4" />
+                                            )}
+                                            Refund
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Request a refund for this failed job</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -245,11 +389,42 @@ export default function JobDetailsPage() {
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <p className="text-sm">{job.errorMessage}</p>
+                                    {job.isRefunded && (
+                                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
+                                            This job has been refunded and cannot be retried.
+                                        </p>
+                                    )}
                                     <div className="flex gap-2">
-                                        <Button variant="outline" size="sm">
-                                            <RefreshCcw className="mr-2 h-4 w-4" />
-                                            Retry Job
-                                        </Button>
+                                        {job.canRetry && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleRetry}
+                                                disabled={isRetrying}
+                                            >
+                                                {isRetrying ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <RefreshCcw className="mr-2 h-4 w-4" />
+                                                )}
+                                                Retry Job
+                                            </Button>
+                                        )}
+                                        {job.canRefund && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() => setShowRefundModal(true)}
+                                                disabled={isRefunding}
+                                            >
+                                                {isRefunding ? (
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                ) : (
+                                                    <DollarSign className="mr-2 h-4 w-4" />
+                                                )}
+                                                Request Refund
+                                            </Button>
+                                        )}
                                         <Button variant="outline" size="sm" asChild>
                                             <Link href="/support">Contact Support</Link>
                                         </Button>
@@ -393,6 +568,87 @@ export default function JobDetailsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Cancel Confirmation Modal */}
+            <Modal open={showCancelModal} onOpenChange={setShowCancelModal}>
+                <ModalContent>
+                    <ModalHeader>
+                        <ModalTitle>Cancel Job</ModalTitle>
+                        <ModalDescription>
+                            Are you sure you want to cancel this job? A refund will be automatically processed if applicable.
+                        </ModalDescription>
+                    </ModalHeader>
+                    <div className="py-4">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Job</span>
+                            <span className="font-medium">{job.requestFileName || `Job #${job.id}`}</span>
+                        </div>
+                    </div>
+                    <ModalFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowCancelModal(false)}
+                            disabled={isCancelling}
+                        >
+                            Keep Job
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={handleCancel}
+                            disabled={isCancelling}
+                        >
+                            {isCancelling ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Cancelling...
+                                </>
+                            ) : (
+                                'Confirm Cancel'
+                            )}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
+
+            {/* Refund Confirmation Modal */}
+            <Modal open={showRefundModal} onOpenChange={setShowRefundModal}>
+                <ModalContent>
+                    <ModalHeader>
+                        <ModalTitle>Request Refund</ModalTitle>
+                        <ModalDescription>
+                            Are you sure you want to request a refund for this failed job? The refund will be added to your wallet balance.
+                        </ModalDescription>
+                    </ModalHeader>
+                    <div className="py-4">
+                        <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Job</span>
+                            <span className="font-medium">{job.requestFileName || `Job #${job.id}`}</span>
+                        </div>
+                    </div>
+                    <ModalFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setShowRefundModal(false)}
+                            disabled={isRefunding}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleRefund}
+                            disabled={isRefunding}
+                        >
+                            {isRefunding ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                'Confirm Refund'
+                            )}
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </div>
     )
 }

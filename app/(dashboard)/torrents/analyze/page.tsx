@@ -35,7 +35,8 @@ import {
 
 import { useTorrentStore } from '@/stores/torrentStore'
 import { useTorrentQuote } from '@/hooks/useTorrents'
-import { useWalletBalance, useInvoicePayment } from '@/hooks/usePayments'
+import { useInvoicePayment } from '@/hooks/usePayments'
+import { useWalletBalance } from '@/hooks/useWallet'
 import { StorageProfileSelector } from '@/components/storage'
 
 export default function TorrentAnalyzePage() {
