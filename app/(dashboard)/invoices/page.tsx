@@ -10,9 +10,7 @@ import {
     FileText,
     Eye,
     Calendar,
-
     CheckCircle,
-
     Clock,
     Loader2,
     RefreshCw,
@@ -20,6 +18,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDateTime } from '@/lib/utils/formatters'
 import Link from 'next/link'
+import { StatsCard } from '@/components/shared'
 import { useInvoices, useInvoiceStatistics } from '@/hooks/useInvoices'
 import { useInvoicesStore } from '@/stores/invoicesStore'
 import type { Invoice } from '@/types/invoices'
@@ -110,51 +109,27 @@ function InvoicesContent() {
 
             {/* Stats */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
-                                <p className="text-3xl font-bold mt-1 text-primary">
-                                    {statsLoading ? '...' : stats?.totalInvoices ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                                <FileText className="h-6 w-6 text-primary" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-success/5 to-success/10 border-success/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Paid</p>
-                                <p className="text-3xl font-bold mt-1 text-success">
-                                    {statsLoading ? '...' : stats?.paidInvoices ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-success/20 flex items-center justify-center">
-                                <CheckCircle className="h-6 w-6 text-success" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-warning/5 to-warning/10 border-warning/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Unpaid</p>
-                                <p className="text-3xl font-bold mt-1 text-warning">
-                                    {statsLoading ? '...' : stats?.unpaidInvoices ?? 0}
-                                </p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-warning/20 flex items-center justify-center">
-                                <Clock className="h-6 w-6 text-warning" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatsCard
+                    title="Total Invoices"
+                    value={stats?.totalInvoices ?? 0}
+                    icon={FileText}
+                    color="primary"
+                    loading={statsLoading}
+                />
+                <StatsCard
+                    title="Paid"
+                    value={stats?.paidInvoices ?? 0}
+                    icon={CheckCircle}
+                    color="success"
+                    loading={statsLoading}
+                />
+                <StatsCard
+                    title="Unpaid"
+                    value={stats?.unpaidInvoices ?? 0}
+                    icon={Clock}
+                    color="warning"
+                    loading={statsLoading}
+                />
             </div>
 
             {/* Invoice List */}

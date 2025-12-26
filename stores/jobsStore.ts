@@ -19,6 +19,15 @@ interface JobsUIState {
     selectedJobId: number | null
     setSelectedJobId: (id: number | null) => void
 
+    // Modal states
+    showCancelModal: boolean
+    showRefundModal: boolean
+    setShowCancelModal: (show: boolean) => void
+    setShowRefundModal: (show: boolean) => void
+    openCancelModal: () => void
+    openRefundModal: () => void
+    closeModals: () => void
+
     // Reset all state
     reset: () => void
 }
@@ -41,12 +50,23 @@ export const useJobsStore = create<JobsUIState>()(
             selectedJobId: null,
             setSelectedJobId: (id) => set({ selectedJobId: id }),
 
+            // Modal states
+            showCancelModal: false,
+            showRefundModal: false,
+            setShowCancelModal: (show) => set({ showCancelModal: show }),
+            setShowRefundModal: (show) => set({ showRefundModal: show }),
+            openCancelModal: () => set({ showCancelModal: true }),
+            openRefundModal: () => set({ showRefundModal: true }),
+            closeModals: () => set({ showCancelModal: false, showRefundModal: false }),
+
             // Reset all
             reset: () => set({
                 selectedStatus: null,
                 currentPage: 1,
                 pageSize: 10,
                 selectedJobId: null,
+                showCancelModal: false,
+                showRefundModal: false,
             }),
         }),
         { name: 'JobsStore' }
@@ -58,3 +78,5 @@ export const selectSelectedStatus = (state: JobsUIState) => state.selectedStatus
 export const selectCurrentPage = (state: JobsUIState) => state.currentPage
 export const selectPageSize = (state: JobsUIState) => state.pageSize
 export const selectSelectedJobId = (state: JobsUIState) => state.selectedJobId
+export const selectShowCancelModal = (state: JobsUIState) => state.showCancelModal
+export const selectShowRefundModal = (state: JobsUIState) => state.showRefundModal

@@ -10,6 +10,7 @@ import { JobCard } from '@/components/jobs/job-card'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Pagination } from '@/components/ui/pagination'
 import { Upload, Search, TrendingUp, CheckCircle, XCircle, Clock, Loader2, RefreshCw, AlertCircle } from 'lucide-react'
+import { StatsCard } from '@/components/shared'
 import { useJobs, useJobStatistics } from '@/hooks/useJobs'
 import { useJobsStore } from '@/stores/jobsStore'
 import { JobStatus, UserRole } from '@/types/enums'
@@ -225,58 +226,30 @@ function JobsListContent() {
 
             {/* Stats Cards */}
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Total Jobs</p>
-                                <p className="text-3xl font-bold mt-1 text-primary">{stats.total}</p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-primary/20 flex items-center justify-center">
-                                <TrendingUp className="h-6 w-6 text-primary" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-info/5 to-info/10 border-info/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Active</p>
-                                <p className="text-3xl font-bold mt-1 text-info">{stats.active}</p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-info/20 flex items-center justify-center">
-                                <Clock className="h-6 w-6 text-info" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-success/5 to-success/10 border-success/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Completed</p>
-                                <p className="text-3xl font-bold mt-1 text-success">{stats.completed}</p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-success/20 flex items-center justify-center">
-                                <CheckCircle className="h-6 w-6 text-success" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="bg-gradient-to-br from-danger/5 to-danger/10 border-danger/20">
-                    <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-muted-foreground">Failed</p>
-                                <p className="text-3xl font-bold mt-1 text-danger">{stats.failed}</p>
-                            </div>
-                            <div className="h-12 w-12 rounded-xl bg-danger/20 flex items-center justify-center">
-                                <XCircle className="h-6 w-6 text-danger" />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <StatsCard
+                    title="Total Jobs"
+                    value={stats.total}
+                    icon={TrendingUp}
+                    color="primary"
+                />
+                <StatsCard
+                    title="Active"
+                    value={stats.active}
+                    icon={Clock}
+                    color="info"
+                />
+                <StatsCard
+                    title="Completed"
+                    value={stats.completed}
+                    icon={CheckCircle}
+                    color="success"
+                />
+                <StatsCard
+                    title="Failed"
+                    value={stats.failed}
+                    icon={XCircle}
+                    color="danger"
+                />
             </div>
 
             {/* Filters */}

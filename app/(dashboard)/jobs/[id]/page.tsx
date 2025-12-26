@@ -1,41 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import {
-    ArrowLeft,
-    Download,
-    Upload,
-    CheckCircle,
-    XCircle,
-    Clock,
-    HardDrive,
-    FileText,
-    RefreshCcw,
-    AlertCircle,
-    Loader2,
-    Cloud,
-    DollarSign,
-    StopCircle,
-} from 'lucide-react'
-import { formatFileSize, formatDateTime, formatRelativeTime } from '@/lib/utils/formatters'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-    Modal,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalTitle,
-    ModalDescription,
-} from '@/components/ui/modal'
+import { ArrowLeft } from 'lucide-react'
 import {
     useJob,
     useRetryJob,
@@ -47,98 +13,30 @@ import {
 import { JobStatus, UserRole } from '@/types/enums'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
 import { useParams } from 'next/navigation'
-import { JobTimeline } from '@/components/jobs/JobTimeline'
-
-const statusConfig: Record<JobStatus, {
-    icon: React.ReactNode
-    badgeVariant: 'default' | 'secondary' | 'destructive' | 'warning' | 'processing' | 'pending'
-    label: string
-    color: string
-}> = {
-    [JobStatus.QUEUED]: {
-        icon: <Clock className="h-6 w-6" />,
-        badgeVariant: 'pending',
-        label: 'Queued',
-        color: 'text-warning',
-    },
-    [JobStatus.DOWNLOADING]: {
-        icon: <Download className="h-6 w-6" />,
-        badgeVariant: 'processing',
-        label: 'Downloading',
-        color: 'text-teal-primary',
-    },
-    [JobStatus.PENDING_UPLOAD]: {
-        icon: <Clock className="h-6 w-6" />,
-        badgeVariant: 'pending',
-        label: 'Pending Upload',
-        color: 'text-warning',
-    },
-    [JobStatus.UPLOADING]: {
-        icon: <Upload className="h-6 w-6" />,
-        badgeVariant: 'secondary',
-        label: 'Uploading',
-        color: 'text-teal-secondary',
-    },
-    [JobStatus.TORRENT_DOWNLOAD_RETRY]: {
-        icon: <RefreshCcw className="h-6 w-6" />,
-        badgeVariant: 'processing',
-        label: 'Retrying download',
-        color: 'text-warning',
-    },
-    [JobStatus.UPLOAD_RETRY]: {
-        icon: <RefreshCcw className="h-6 w-6" />,
-        badgeVariant: 'processing',
-        label: 'Retrying upload',
-        color: 'text-warning',
-    },
-    [JobStatus.COMPLETED]: {
-        icon: <CheckCircle className="h-6 w-6" />,
-        badgeVariant: 'default',
-        label: 'Completed',
-        color: 'text-teal-secondary',
-    },
-    [JobStatus.FAILED]: {
-        icon: <XCircle className="h-6 w-6" />,
-        badgeVariant: 'destructive',
-        label: 'Failed',
-        color: 'text-orange',
-    },
-    [JobStatus.TORRENT_FAILED]: {
-        icon: <XCircle className="h-6 w-6" />,
-        badgeVariant: 'destructive',
-        label: 'Download failed',
-        color: 'text-orange',
-    },
-    [JobStatus.UPLOAD_FAILED]: {
-        icon: <XCircle className="h-6 w-6" />,
-        badgeVariant: 'destructive',
-        label: 'Upload failed',
-        color: 'text-orange',
-    },
-    [JobStatus.GOOGLE_DRIVE_FAILED]: {
-        icon: <AlertCircle className="h-6 w-6" />,
-        badgeVariant: 'destructive',
-        label: 'Google Drive upload failed',
-        color: 'text-orange',
-    },
-    [JobStatus.CANCELLED]: {
-        icon: <XCircle className="h-6 w-6" />,
-        badgeVariant: 'secondary',
-        label: 'Cancelled',
-        color: 'text-muted-foreground',
-    },
-}
+import { useJobsStore } from '@/stores/jobsStore'
+import {
+    JobTimeline,
+    JobHeader,
+    JobProgressCard,
+    JobErrorCard,
+    JobSuccessCard,
+    JobDetailsCard,
+    JobStorageInfo,
+    JobAdminInfo,
+    JobCancelModal,
+    JobRefundModal,
+    JobLoadingState,
+    JobErrorState,
+    isJobActive,
+    isJobFailed,
+} from '@/components/jobs'
 
 export default function JobDetailsPage() {
     const params = useParams()
     const jobId = Number(params.id)
     const { data: session } = useSession()
-
-    // State for confirmation dialogs
-    const [showCancelModal, setShowCancelModal] = useState(false)
-    const [showRefundModal, setShowRefundModal] = useState(false)
+    const { setShowCancelModal, setShowRefundModal } = useJobsStore()
 
     // Use React Query hook to fetch job details
     const { data: job, isLoading, error, refetch } = useJob(jobId)
@@ -185,59 +83,25 @@ export default function JobDetailsPage() {
 
     // Loading state
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        )
+        return <JobLoadingState />
     }
 
     // Error state
     if (error || !job) {
         return (
-            <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href="/jobs">
-                            <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Jobs
-                        </Link>
-                    </Button>
-                </div>
-                <Card className="border-danger/50">
-                    <CardContent className="p-6 text-center">
-                        <AlertCircle className="h-12 w-12 text-danger mx-auto mb-4" />
-                        <p className="text-danger mb-4">
-                            {error instanceof Error ? error.message : 'Job not found'}
-                        </p>
-                        <div className="flex gap-2 justify-center">
-                            <Button onClick={() => refetch()} variant="outline" size="sm">
-                                <RefreshCcw className="mr-2 h-4 w-4" />
-                                Retry
-                            </Button>
-                            <Button asChild variant="outline" size="sm">
-                                <Link href="/jobs">Back to Jobs</Link>
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
+            <JobErrorState
+                error={error}
+                onRetry={() => refetch()}
+            />
         )
     }
 
-    const config = statusConfig[job.status as JobStatus] || statusConfig[JobStatus.QUEUED]
-    const isActive = [
-        JobStatus.QUEUED,
-        JobStatus.DOWNLOADING,
-        JobStatus.PENDING_UPLOAD,
-        JobStatus.UPLOADING,
-        JobStatus.TORRENT_DOWNLOAD_RETRY,
-        JobStatus.UPLOAD_RETRY
-    ].includes(job.status as JobStatus)
+    const jobIsActive = isJobActive(job.status as JobStatus)
+    const jobHasFailed = isJobFailed(job.status as JobStatus)
 
     return (
         <div className="space-y-6">
-            {/* Header */}
+            {/* Back Button */}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" size="sm" asChild>
                     <Link href="/jobs">
@@ -248,408 +112,64 @@ export default function JobDetailsPage() {
             </div>
 
             {/* Job Header */}
-            <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                    <h1 className="text-2xl font-bold">{job.requestFileName || `Job #${job.id}`}</h1>
-                    <p className="text-muted-foreground">Job #{job.id}</p>
-                    {job.currentState && (
-                        <p className="text-sm text-muted-foreground mt-1">{job.currentState}</p>
-                    )}
-                </div>
-                <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
-                        <Badge variant={config.badgeVariant} className="text-sm">
-                            {config.label}
-                        </Badge>
-                        {job.isRefunded && (
-                            <Badge variant="secondary" className="text-sm">
-                                Refunded
-                            </Badge>
-                        )}
-                    </div>
-                    {/* Action Buttons */}
-                    <div className="flex gap-2">
-                        {job.canRetry && (
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleRetry}
-                                            disabled={isRetrying}
-                                        >
-                                            {isRetrying ? (
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <RefreshCcw className="mr-2 h-4 w-4" />
-                                            )}
-                                            Retry
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Retry this job from its current phase</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        {job.canCancel && (
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="destructive"
-                                            size="sm"
-                                            onClick={() => setShowCancelModal(true)}
-                                            disabled={isCancelling}
-                                        >
-                                            {isCancelling ? (
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <StopCircle className="mr-2 h-4 w-4" />
-                                            )}
-                                            Cancel
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Cancel this job and receive a refund</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                        {job.canRefund && (
-                            <TooltipProvider delayDuration={100}>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => setShowRefundModal(true)}
-                                            disabled={isRefunding}
-                                        >
-                                            {isRefunding ? (
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <DollarSign className="mr-2 h-4 w-4" />
-                                            )}
-                                            Refund
-                                        </Button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Request a refund for this failed job</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
-                </div>
-            </div>
+            <JobHeader
+                job={job}
+                onRetry={handleRetry}
+                isRetrying={isRetrying}
+                isCancelling={isCancelling}
+                isRefunding={isRefunding}
+            />
 
             <div className="grid gap-6 lg:grid-cols-3">
                 {/* Main Content */}
                 <div className="space-y-6 lg:col-span-2">
                     {/* Progress Card (for active jobs) */}
-                    {isActive && (
-                        <Card className="border-primary/20 bg-primary/5">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <div className={cn('animate-pulse', config.color)}>{config.icon}</div>
-                                    {job.currentState || config.label}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Progress</span>
-                                        <span className="font-medium">{job.progressPercentage.toFixed(1)}%</span>
-                                    </div>
-                                    <Progress value={job.progressPercentage} className="h-3" />
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-muted-foreground">Downloaded</span>
-                                    <span className="font-medium">
-                                        {formatFileSize(job.bytesDownloaded)} / {formatFileSize(job.totalBytes)}
-                                    </span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
+                    {jobIsActive && <JobProgressCard job={job} />}
 
                     {/* Error Card (for failed jobs) */}
-                    {(job.status === JobStatus.FAILED ||
-                        job.status === JobStatus.TORRENT_FAILED ||
-                        job.status === JobStatus.UPLOAD_FAILED ||
-                        job.status === JobStatus.GOOGLE_DRIVE_FAILED) && job.errorMessage && (
-                            <Card className="border-orange/50 bg-orange/5">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2 text-orange">
-                                        <AlertCircle className="h-5 w-5" />
-                                        Error
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <p className="text-sm">{job.errorMessage}</p>
-                                    {job.isRefunded && (
-                                        <p className="text-sm text-muted-foreground bg-muted px-3 py-2 rounded-md">
-                                            This job has been refunded and cannot be retried.
-                                        </p>
-                                    )}
-                                    <div className="flex gap-2">
-                                        {job.canRetry && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handleRetry}
-                                                disabled={isRetrying}
-                                            >
-                                                {isRetrying ? (
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <RefreshCcw className="mr-2 h-4 w-4" />
-                                                )}
-                                                Retry Job
-                                            </Button>
-                                        )}
-                                        {job.canRefund && (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => setShowRefundModal(true)}
-                                                disabled={isRefunding}
-                                            >
-                                                {isRefunding ? (
-                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                ) : (
-                                                    <DollarSign className="mr-2 h-4 w-4" />
-                                                )}
-                                                Request Refund
-                                            </Button>
-                                        )}
-                                        <Button variant="outline" size="sm" asChild>
-                                            <Link href="/support">Contact Support</Link>
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        )}
-
-                    {/* Success Card (for completed jobs) */}
-                    {job.status === JobStatus.COMPLETED && (
-                        <Card className="border-teal-secondary/50 bg-teal-secondary/5">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-teal-secondary">
-                                    <CheckCircle className="h-5 w-5" />
-                                    Download Complete
-                                </CardTitle>
-                                <CardDescription>
-                                    Your files have been uploaded to {job.storageProfileName}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button asChild>
-                                    <Link href={`https://drive.google.com`} target="_blank">
-                                        <HardDrive className="mr-2 h-4 w-4" />
-                                        Open in {job.storageProfileName}
-                                    </Link>
-                                </Button>
-                            </CardContent>
-                        </Card>
+                    {jobHasFailed && job.errorMessage && (
+                        <JobErrorCard
+                            job={job}
+                            onRetry={handleRetry}
+                            onRefund={() => setShowRefundModal(true)}
+                            isRetrying={isRetrying}
+                            isRefunding={isRefunding}
+                        />
                     )}
 
+                    {/* Success Card (for completed jobs) */}
+                    {job.status === JobStatus.COMPLETED && <JobSuccessCard job={job} />}
+
                     {/* Job Details */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Job Details</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Job ID</p>
-                                    <p className="font-medium">#{job.id}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Status</p>
-                                    <p className="font-medium">{config.label}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Request File Name</p>
-                                    <p className="font-medium">{job.requestFileName || 'N/A'}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Total Size</p>
-                                    <p className="font-medium">{formatFileSize(job.totalBytes)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Selected Files</p>
-                                    <p className="font-medium">
-                                        {job.selectedFilePaths.length === 0
-                                            ? 'All files'
-                                            : `${job.selectedFilePaths.length} file${job.selectedFilePaths.length > 1 ? 's' : ''}`}
-                                    </p>
-                                    {job.selectedFilePaths.length > 0 && job.selectedFilePaths.length <= 10 && (
-                                        <p className="text-xs text-muted-foreground mt-1">
-                                            {job.selectedFilePaths.slice(0, 5).map(p => p.split('/').pop()).join(', ')}{job.selectedFilePaths.length > 5 ? '...' : ''}
-                                        </p>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Storage Profile</p>
-                                    <p className="font-medium">{job.storageProfileName || 'Unknown'}</p>
-                                </div>
-                                {job.currentState && (
-                                    <div className="sm:col-span-2">
-                                        <p className="text-sm text-muted-foreground">Current State</p>
-                                        <p className="font-medium">{job.currentState}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <JobDetailsCard job={job} />
                 </div>
 
                 {/* Sidebar */}
                 <div className="space-y-4">
                     {/* Storage Info */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2 text-base">
-                                <HardDrive className="h-4 w-4" />
-                                Storage
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="font-medium">{job.storageProfileName || 'Unknown'}</p>
-                            <p className="text-sm text-muted-foreground">Google Drive</p>
-                        </CardContent>
-                    </Card>
+                    <JobStorageInfo job={job} />
 
                     {/* Timeline */}
                     <JobTimeline jobId={jobId} />
 
                     {/* Admin-Only Information */}
-                    {session?.user?.role === UserRole.Admin && (
-                        <Card className="border-warning/50">
-                            <CardHeader>
-                                <CardTitle className="text-base flex items-center gap-2">
-                                    <AlertCircle className="h-4 w-4" />
-                                    Admin Information
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                {job.lastHeartbeat && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Last Heartbeat</p>
-                                        <TooltipProvider delayDuration={100}>
-                                            <Tooltip>
-                                                <TooltipTrigger asChild>
-                                                    <p className="text-sm font-medium cursor-help">
-                                                        {formatRelativeTime(job.lastHeartbeat)}
-                                                    </p>
-                                                </TooltipTrigger>
-                                                <TooltipContent>
-                                                    <p>{formatDateTime(job.lastHeartbeat)}</p>
-                                                </TooltipContent>
-                                            </Tooltip>
-                                        </TooltipProvider>
-                                    </div>
-                                )}
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Job Type</p>
-                                    <p className="text-sm font-medium">{job.type}</p>
-                                </div>
-                                {job.currentState && (
-                                    <div>
-                                        <p className="text-sm text-muted-foreground">Internal State</p>
-                                        <p className="text-sm font-medium">{job.currentState}</p>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                    {isAdmin && <JobAdminInfo job={job} />}
                 </div>
             </div>
 
             {/* Cancel Confirmation Modal */}
-            <Modal open={showCancelModal} onOpenChange={setShowCancelModal}>
-                <ModalContent>
-                    <ModalHeader>
-                        <ModalTitle>Cancel Job</ModalTitle>
-                        <ModalDescription>
-                            Are you sure you want to cancel this job? A refund will be automatically processed if applicable.
-                        </ModalDescription>
-                    </ModalHeader>
-                    <div className="py-4">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Job</span>
-                            <span className="font-medium">{job.requestFileName || `Job #${job.id}`}</span>
-                        </div>
-                    </div>
-                    <ModalFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowCancelModal(false)}
-                            disabled={isCancelling}
-                        >
-                            Keep Job
-                        </Button>
-                        <Button
-                            variant="destructive"
-                            onClick={handleCancel}
-                            disabled={isCancelling}
-                        >
-                            {isCancelling ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Cancelling...
-                                </>
-                            ) : (
-                                'Confirm Cancel'
-                            )}
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
+            <JobCancelModal
+                job={job}
+                onConfirm={handleCancel}
+                loading={isCancelling}
+            />
 
             {/* Refund Confirmation Modal */}
-            <Modal open={showRefundModal} onOpenChange={setShowRefundModal}>
-                <ModalContent>
-                    <ModalHeader>
-                        <ModalTitle>Request Refund</ModalTitle>
-                        <ModalDescription>
-                            Are you sure you want to request a refund for this failed job? The refund will be added to your wallet balance.
-                        </ModalDescription>
-                    </ModalHeader>
-                    <div className="py-4">
-                        <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">Job</span>
-                            <span className="font-medium">{job.requestFileName || `Job #${job.id}`}</span>
-                        </div>
-                    </div>
-                    <ModalFooter>
-                        <Button
-                            variant="outline"
-                            onClick={() => setShowRefundModal(false)}
-                            disabled={isRefunding}
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={handleRefund}
-                            disabled={isRefunding}
-                        >
-                            {isRefunding ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Processing...
-                                </>
-                            ) : (
-                                'Confirm Refund'
-                            )}
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
+            <JobRefundModal
+                job={job}
+                onConfirm={handleRefund}
+                loading={isRefunding}
+            />
         </div>
     )
 }
-
