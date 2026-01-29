@@ -11,7 +11,6 @@ import {
 import {
     RefreshCcw,
     StopCircle,
-    DollarSign,
     Loader2,
 } from 'lucide-react'
 import type { Job } from '@/types/jobs'
@@ -24,7 +23,6 @@ interface JobHeaderProps {
     onRetry?: () => void
     isRetrying?: boolean
     isCancelling?: boolean
-    isRefunding?: boolean
 }
 
 export function JobHeader({
@@ -32,10 +30,9 @@ export function JobHeader({
     onRetry,
     isRetrying,
     isCancelling,
-    isRefunding,
 }: JobHeaderProps) {
     const config = getJobStatusConfig(job.status as JobStatus)
-    const { openCancelModal, openRefundModal } = useJobsStore()
+    const { openCancelModal } = useJobsStore()
 
     return (
         <div className="flex items-start justify-between">
@@ -51,11 +48,6 @@ export function JobHeader({
                     <Badge variant={config.badgeVariant} className="text-sm">
                         {config.label}
                     </Badge>
-                    {job.isRefunded && (
-                        <Badge variant="secondary" className="text-sm">
-                            Refunded
-                        </Badge>
-                    )}
                 </div>
                 {/* Action Buttons */}
                 <div className="flex gap-2">
@@ -102,31 +94,7 @@ export function JobHeader({
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    <p>Cancel this job and receive a refund</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    )}
-                    {job.canRefund && (
-                        <TooltipProvider delayDuration={100}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={openRefundModal}
-                                        disabled={isRefunding}
-                                    >
-                                        {isRefunding ? (
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        ) : (
-                                            <DollarSign className="mr-2 h-4 w-4" />
-                                        )}
-                                        Refund
-                                    </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    <p>Request a refund for this failed job</p>
+                                    <p>Cancel this job</p>
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
@@ -136,4 +104,3 @@ export function JobHeader({
         </div>
     )
 }
-

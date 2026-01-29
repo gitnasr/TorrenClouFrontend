@@ -65,3 +65,5 @@ export function JobDetailsCard({ job }: JobDetailsCardProps) {
     )
 }
 
+
+

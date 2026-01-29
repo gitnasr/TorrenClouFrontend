@@ -6,12 +6,8 @@ import {
     useJob,
     useRetryJob,
     useCancelJob,
-    useRefundJob,
-    useAdminRetryJob,
-    useAdminCancelJob,
 } from '@/hooks/useJobs'
-import { JobStatus, UserRole } from '@/types/enums'
-import { useSession } from 'next-auth/react'
+import { JobStatus } from '@/types/enums'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useJobsStore } from '@/stores/jobsStore'
@@ -23,9 +19,7 @@ import {
     JobSuccessCard,
     JobDetailsCard,
     JobStorageInfo,
-    JobAdminInfo,
     JobCancelModal,
-    JobRefundModal,
     JobLoadingState,
     JobErrorState,
     isJobActive,
@@ -35,51 +29,28 @@ import {
 export default function JobDetailsPage() {
     const params = useParams()
     const jobId = Number(params.id)
-    const { data: session } = useSession()
-    const { setShowCancelModal, setShowRefundModal } = useJobsStore()
+    const { setShowCancelModal } = useJobsStore()
 
     // Use React Query hook to fetch job details
     const { data: job, isLoading, error, refetch } = useJob(jobId)
 
-    // Mutation hooks - use admin endpoints if user is admin
-    const isAdmin = session?.user?.role === UserRole.Admin
+    // Mutation hooks
     const retryJobMutation = useRetryJob()
     const cancelJobMutation = useCancelJob()
-    const refundJobMutation = useRefundJob()
-    const adminRetryJobMutation = useAdminRetryJob()
-    const adminCancelJobMutation = useAdminCancelJob()
 
-    // Use admin or user mutations based on role
     const handleRetry = () => {
-        if (isAdmin) {
-            adminRetryJobMutation.mutate(jobId)
-        } else {
-            retryJobMutation.mutate(jobId)
-        }
+        retryJobMutation.mutate(jobId)
     }
 
     const handleCancel = () => {
-        if (isAdmin) {
-            adminCancelJobMutation.mutate(jobId, {
-                onSuccess: () => setShowCancelModal(false),
-            })
-        } else {
-            cancelJobMutation.mutate(jobId, {
-                onSuccess: () => setShowCancelModal(false),
-            })
-        }
-    }
-
-    const handleRefund = () => {
-        refundJobMutation.mutate(jobId, {
-            onSuccess: () => setShowRefundModal(false),
+        cancelJobMutation.mutate(jobId, {
+            onSuccess: () => setShowCancelModal(false),
         })
     }
 
     // Check if any mutation is pending
-    const isRetrying = retryJobMutation.isPending || adminRetryJobMutation.isPending
-    const isCancelling = cancelJobMutation.isPending || adminCancelJobMutation.isPending
-    const isRefunding = refundJobMutation.isPending
+    const isRetrying = retryJobMutation.isPending
+    const isCancelling = cancelJobMutation.isPending
 
     // Loading state
     if (isLoading) {
@@ -117,7 +88,6 @@ export default function JobDetailsPage() {
                 onRetry={handleRetry}
                 isRetrying={isRetrying}
                 isCancelling={isCancelling}
-                isRefunding={isRefunding}
             />
 
             <div className="grid gap-6 lg:grid-cols-3">
@@ -131,9 +101,7 @@ export default function JobDetailsPage() {
                         <JobErrorCard
                             job={job}
                             onRetry={handleRetry}
-                            onRefund={() => setShowRefundModal(true)}
                             isRetrying={isRetrying}
-                            isRefunding={isRefunding}
                         />
                     )}
 
@@ -151,9 +119,6 @@ export default function JobDetailsPage() {
 
                     {/* Timeline */}
                     <JobTimeline jobId={jobId} />
-
-                    {/* Admin-Only Information */}
-                    {isAdmin && <JobAdminInfo job={job} />}
                 </div>
             </div>
 
@@ -162,13 +127,6 @@ export default function JobDetailsPage() {
                 job={job}
                 onConfirm={handleCancel}
                 loading={isCancelling}
-            />
-
-            {/* Refund Confirmation Modal */}
-            <JobRefundModal
-                job={job}
-                onConfirm={handleRefund}
-                loading={isRefunding}
             />
         </div>
     )

@@ -3,12 +3,14 @@ import apiClient from '../axios'
 import {
     torrentInfoSchema,
     quoteResponseSchema,
+    jobCreationResultSchema,
     type TorrentInfo,
     type QuoteResponse,
+    type JobCreationResult,
 } from '@/types/torrents'
 
 // Re-export types for convenience
-export type { TorrentInfo, QuoteResponse }
+export type { TorrentInfo, QuoteResponse, JobCreationResult }
 export { getTorrentErrorMessage, torrentErrorMessages } from '@/types/torrents'
 
 /**
@@ -40,28 +42,24 @@ export async function analyzeTorrentFile(file: File): Promise<TorrentInfo> {
  * POST /api/torrents/quote (authenticated)
  * 
  * @param torrentFile - The .torrent file
- * @param selectedFilePaths - Array of file paths to download (must match paths from TorrentInfo.files)
+ * @param selectedFilePaths - Array of file paths to download (null = all files)
  * @param storageProfileId - ID of the storage profile to use for upload
- * @param voucherCode - Optional voucher code for discount
- * @returns Quote with pricing details and invoice ID
+ * @returns Quote with torrent metadata and torrentFileId for job creation
  */
 export async function getTorrentQuote(
     torrentFile: File,
-    selectedFilePaths: string[],
-    storageProfileId: number,
-    voucherCode?: string
+    selectedFilePaths: string[] | null,
+    storageProfileId: number
 ): Promise<QuoteResponse> {
     const formData = new FormData()
     formData.append('torrentFile', torrentFile)
     formData.append('storageProfileId', storageProfileId.toString())
 
-    // Append each path separately for proper array handling
-    selectedFilePaths.forEach(path => {
-        formData.append('selectedFilePaths', path)
-    })
-
-    if (voucherCode) {
-        formData.append('voucherCode', voucherCode)
+    // Append each path separately for proper array handling (null = all files)
+    if (selectedFilePaths) {
+        selectedFilePaths.forEach(path => {
+            formData.append('selectedFilePaths', path)
+        })
     }
 
     const response = await apiClient.post<QuoteResponse>(
@@ -77,3 +75,28 @@ export async function getTorrentQuote(
     return quoteResponseSchema.parse(response.data)
 }
 
+/**
+ * Create a job directly from a quote
+ * POST /api/torrents/create-job (authenticated)
+ * 
+ * @param torrentFileId - The torrent file ID from quote response
+ * @param selectedFilePaths - Array of file paths to download (null = all files)
+ * @param storageProfileId - Optional storage profile ID
+ * @returns Job creation result with job ID
+ */
+export async function createJob(
+    torrentFileId: number,
+    selectedFilePaths: string[] | null,
+    storageProfileId?: number
+): Promise<JobCreationResult> {
+    const response = await apiClient.post<JobCreationResult>(
+        '/torrents/create-job',
+        {
+            torrentFileId,
+            selectedFilePaths,
+            storageProfileId,
+        }
+    )
+
+    return jobCreationResultSchema.parse(response.data)
+}

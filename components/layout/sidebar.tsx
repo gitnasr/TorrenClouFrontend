@@ -7,10 +7,8 @@ import {
   LayoutDashboard,
   Upload,
   FolderOpen,
-  Wallet,
   HardDrive,
   FileText,
-  Settings,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
@@ -34,23 +32,12 @@ const navigation: NavItem[] = [
     ],
   },
   { name: 'Jobs', href: '/jobs', icon: FolderOpen },
-  {
-    name: 'Wallet',
-    href: '/wallet',
-    icon: Wallet,
-    children: [
-      { name: 'Overview', href: '/wallet' },
-      { name: 'Transactions', href: '/wallet/transactions' },
-      { name: 'Deposits', href: '/wallet/deposits' },
-    ],
-  },
   { name: 'Storage', href: '/storage', icon: HardDrive },
-  { name: 'Invoices', href: '/invoices', icon: FileText },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Torrents', 'Wallet'])
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Torrents'])
 
   const toggleExpand = (name: string) => {
     setExpandedItems((prev) =>
@@ -144,4 +131,3 @@ export function Sidebar() {
     </div>
   )
 }
-

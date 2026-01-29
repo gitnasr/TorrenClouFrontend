@@ -64,72 +64,45 @@ export const torrentInfoSchema = z.object({
 export type TorrentInfo = z.infer<typeof torrentInfoSchema>
 
 // ============================================
-// Pricing Snapshot Schema
-// ============================================
-
-export const pricingSnapshotSchema = z.object({
-    totalSizeInBytes: z.number(),
-    totalSizeInGb: z.number(), // Computed property: totalSizeInBytes / 1_073_741_824.0
-    calculatedSizeInGb: z.number(),
-    selectedFiles: z.array(z.string()),
-    baseRatePerGb: z.number(),
-    userRegion: z.string(),
-    regionMultiplier: z.number(),
-    healthMultiplier: z.number(),
-    isCacheHit: z.boolean(),
-    cacheDiscountAmount: z.number(),
-    finalPrice: z.number(),
-    calculatedAt: z.string(),
-})
-
-export type PricingSnapshot = z.infer<typeof pricingSnapshotSchema>
-
-// ============================================
-// Quote Response Schema
+// Quote Response Schema (Updated - No Pricing)
 // ============================================
 
 export const quoteResponseSchema = z.object({
-    isReadyToDownload: z.boolean(),
-    originalAmountInUSD: z.number(),
-    finalAmountInUSD: z.number(),
-    finalAmountInNCurrency: z.number(),
-    torrentHealth: torrentHealthMeasurementsSchema,
     fileName: z.string(),
     sizeInBytes: z.number(),
-    isCached: z.boolean(),
     infoHash: z.string(),
+    torrentHealth: torrentHealthMeasurementsSchema,
+    torrentFileId: z.number(),
+    selectedFiles: z.array(z.string()),
     message: z.string().nullable().optional(),
-    pricingDetails: pricingSnapshotSchema,
-    invoiceId: z.number(),
 })
 
 export type QuoteResponse = z.infer<typeof quoteResponseSchema>
 
 // ============================================
-// Invoice Payment Result Schema
+// Create Job Request Schema
 // ============================================
 
-export const invoicePaymentResultSchema = z.object({
-    walletTransaction: z.number(),
-    invoiceId: z.number(),
+export const createJobRequestSchema = z.object({
+    torrentFileId: z.number(),
+    selectedFilePaths: z.array(z.string()).nullable().optional(),
+    storageProfileId: z.number().optional(),
+})
+
+export type CreateJobRequest = z.infer<typeof createJobRequestSchema>
+
+// ============================================
+// Job Creation Result Schema
+// ============================================
+
+export const jobCreationResultSchema = z.object({
     jobId: z.number(),
-    totalAmountInNCurruncy: z.number(), // Note: typo matches backend
+    storageProfileId: z.number().optional(),
     hasStorageProfileWarning: z.boolean(),
     storageProfileWarningMessage: z.string().nullable().optional(),
 })
 
-export type InvoicePaymentResult = z.infer<typeof invoicePaymentResultSchema>
-
-// ============================================
-// Wallet Balance Schema
-// ============================================
-
-export const walletBalanceSchema = z.object({
-    balance: z.number(),
-    currency: z.string(),
-})
-
-export type WalletBalanceDto = z.infer<typeof walletBalanceSchema>
+export type JobCreationResult = z.infer<typeof jobCreationResultSchema>
 
 // ============================================
 // API Error Response Schema
@@ -149,10 +122,8 @@ export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>
 export const torrentErrorMessages: Record<string, string> = {
     INVALID_TORRENT_FILE: 'The uploaded file is not a valid torrent file',
     VALIDATION_ERROR: 'Request validation failed',
-    INSUFFICIENT_BALANCE: 'Insufficient wallet balance to complete this payment',
-    INVOICE_NOT_FOUND: 'Invoice not found',
-    INVOICE_EXPIRED: 'This invoice has expired. Please get a new quote.',
-    INVOICE_ALREADY_PAID: 'This invoice has already been paid',
+    TORRENT_FILE_NOT_FOUND: 'Torrent file not found',
+    STORAGE_PROFILE_NOT_FOUND: 'Storage profile not found',
     UNAUTHORIZED: 'Please sign in to continue',
     FORBIDDEN: 'You do not have permission to perform this action',
 }

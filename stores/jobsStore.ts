@@ -21,11 +21,8 @@ interface JobsUIState {
 
     // Modal states
     showCancelModal: boolean
-    showRefundModal: boolean
     setShowCancelModal: (show: boolean) => void
-    setShowRefundModal: (show: boolean) => void
     openCancelModal: () => void
-    openRefundModal: () => void
     closeModals: () => void
 
     // Reset all state
@@ -52,12 +49,9 @@ export const useJobsStore = create<JobsUIState>()(
 
             // Modal states
             showCancelModal: false,
-            showRefundModal: false,
             setShowCancelModal: (show) => set({ showCancelModal: show }),
-            setShowRefundModal: (show) => set({ showRefundModal: show }),
             openCancelModal: () => set({ showCancelModal: true }),
-            openRefundModal: () => set({ showRefundModal: true }),
-            closeModals: () => set({ showCancelModal: false, showRefundModal: false }),
+            closeModals: () => set({ showCancelModal: false }),
 
             // Reset all
             reset: () => set({
@@ -66,7 +60,6 @@ export const useJobsStore = create<JobsUIState>()(
                 pageSize: 10,
                 selectedJobId: null,
                 showCancelModal: false,
-                showRefundModal: false,
             }),
         }),
         { name: 'JobsStore' }
@@ -79,4 +72,3 @@ export const selectCurrentPage = (state: JobsUIState) => state.currentPage
 export const selectPageSize = (state: JobsUIState) => state.pageSize
 export const selectSelectedJobId = (state: JobsUIState) => state.selectedJobId
 export const selectShowCancelModal = (state: JobsUIState) => state.showCancelModal
-export const selectShowRefundModal = (state: JobsUIState) => state.showRefundModal

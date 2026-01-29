@@ -2,7 +2,6 @@
 
 import { Suspense, useMemo } from 'react'
 import { useSearchParams, useRouter, usePathname } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,8 +12,7 @@ import { Upload, Search, TrendingUp, CheckCircle, XCircle, Clock, Loader2, Refre
 import { StatsCard } from '@/components/shared'
 import { useJobs, useJobStatistics } from '@/hooks/useJobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import { JobStatus, UserRole } from '@/types/enums'
-import { filterJobsForUser } from '@/lib/utils/jobFilters'
+import { JobStatus } from '@/types/enums'
 import { statusLabels } from '@/types/jobs'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -26,7 +24,6 @@ import type { Job } from '@/types/jobs'
 function toUserJob(job: Job): UserJob {
     return {
         id: job.id,
-        userId: 0, // Not needed for display
         storageProfileId: job.storageProfileId,
         status: job.status as JobStatus,
         type: job.type as any,
@@ -35,7 +32,6 @@ function toUserJob(job: Job): UserJob {
         currentState: job.currentState ?? undefined,
         startedAt: job.startedAt ?? undefined,
         completedAt: job.completedAt ?? undefined,
-        lastHeartbeat: job.lastHeartbeat ?? undefined,
         bytesDownloaded: job.bytesDownloaded,
         totalBytes: job.totalBytes,
         selectedFilePaths: job.selectedFilePaths,
@@ -51,7 +47,6 @@ function JobsListContent() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const pathname = usePathname()
-    const { data: session } = useSession()
 
     // Zustand store for filters and pagination
     const {
@@ -61,22 +56,15 @@ function JobsListContent() {
         setCurrentPage,
         pageSize,
         setPageSize,
-        reset
     } = useJobsStore()
 
     // React Query hooks for fetching jobs list and statistics
     const { data, isLoading, error, refetch } = useJobs()
     const { data: jobStats } = useJobStatistics()
 
-    // Filter jobs based on user role
-    const filteredJobs = useMemo(() => {
-        if (!data?.items) return []
-        return filterJobsForUser(data.items, session?.user?.role as UserRole | undefined)
-    }, [data?.items, session?.user?.role])
-
     // Build status filters dynamically from backend statistics
     const statusFilters = useMemo(() => {
-        // Always include an \"All\" option implemented purely on the frontend
+        // Always include an "All" option implemented purely on the frontend
         const filters: { label: string; value: string }[] = [
             { label: 'All', value: 'all' },
         ]
@@ -162,12 +150,13 @@ function JobsListContent() {
 
     // Filter by search (client-side since API may not support search)
     const filteredItems = useMemo(() => {
-        return filteredJobs.filter((job) => {
+        if (!data?.items) return []
+        return data.items.filter((job) => {
             const matchesSearch = !search ||
                 job.requestFileName?.toLowerCase().includes(search.toLowerCase())
             return matchesSearch
         })
-    }, [filteredJobs, search])
+    }, [data?.items, search])
 
     // Loading state
     if (isLoading) {
@@ -333,4 +322,3 @@ export default function JobsListPage() {
         </Suspense>
     )
 }
-

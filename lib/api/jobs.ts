@@ -113,7 +113,7 @@ export interface JobActionResponse {
 // ============================================
 
 /**
- * Retry a failed job (user endpoint)
+ * Retry a failed job
  * POST /api/jobs/{id}/retry
  */
 export async function retryJob(jobId: number): Promise<JobActionResponse> {
@@ -122,42 +122,10 @@ export async function retryJob(jobId: number): Promise<JobActionResponse> {
 }
 
 /**
- * Cancel an active job (user endpoint)
+ * Cancel an active job
  * POST /api/jobs/{id}/cancel
  */
 export async function cancelJob(jobId: number): Promise<JobActionResponse> {
     const response = await apiClient.post<JobActionResponse>(`/jobs/${jobId}/cancel`)
     return response.data
 }
-
-/**
- * Request a refund for a failed job (user endpoint)
- * POST /api/jobs/{id}/refund
- */
-export async function refundJob(jobId: number): Promise<JobActionResponse> {
-    const response = await apiClient.post<JobActionResponse>(`/jobs/${jobId}/refund`)
-    return response.data
-}
-
-// ============================================
-// Admin Job Actions
-// ============================================
-
-/**
- * Retry any user's failed job (admin endpoint)
- * POST /api/admin/jobs/{id}/retry
- */
-export async function adminRetryJob(jobId: number): Promise<JobActionResponse> {
-    const response = await apiClient.post<JobActionResponse>(`/admin/jobs/${jobId}/retry`)
-    return response.data
-}
-
-/**
- * Cancel any user's active job (admin endpoint)
- * POST /api/admin/jobs/{id}/cancel
- */
-export async function adminCancelJob(jobId: number): Promise<JobActionResponse> {
-    const response = await apiClient.post<JobActionResponse>(`/admin/jobs/${jobId}/cancel`)
-    return response.data
-}
-

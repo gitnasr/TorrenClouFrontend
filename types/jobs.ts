@@ -56,7 +56,7 @@ export const jobStatusSchema = z.preprocess(
     z.enum(validStatusStrings)
 )
 
-export const jobTypeSchema = z.enum(['Torrent', 'Sync'])
+export const jobTypeSchema = z.enum(['Torrent'])
 
 export const jobSchema = z.object({
     id: z.number().int().positive(),
@@ -68,22 +68,18 @@ export const jobSchema = z.object({
     requestFileName: z.string().nullable(),
     errorMessage: z.string().nullable(),
     currentState: z.string().nullable(),
-    // Admin-only: Last heartbeat from worker processing the job
-    lastHeartbeat: z.string().datetime().nullable().optional(),
     bytesDownloaded: z.number().int().nonnegative(),
     totalBytes: z.number().int().nonnegative(),
-    selectedFilePaths: z.array(z.string()),
+    selectedFilePaths: z.array(z.string()).nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime().nullable().optional(),
     startedAt: z.string().datetime().nullable().optional(),
     completedAt: z.string().datetime().nullable().optional(),
     progressPercentage: z.number().min(0).max(100),
     isActive: z.boolean(),
-    // Refund and action state properties
-    isRefunded: z.boolean().optional().default(false),
+    // Action state properties
     canRetry: z.boolean().optional().default(false),
     canCancel: z.boolean().optional().default(false),
-    canRefund: z.boolean().optional().default(false),
 })
 
 export const paginatedJobsSchema = z.object({
@@ -254,20 +250,12 @@ export const jobsErrorMessages: Record<string, string> = {
     // Retry errors
     'JOB_COMPLETED': 'Cannot retry a completed job.',
     'JOB_CANCELLED': 'Cannot retry a cancelled job.',
-    'JOB_REFUNDED': 'Cannot retry a refunded job.',
     'JOB_ACTIVE': 'Job is currently active. Wait for it to complete or fail before retrying.',
     'STORAGE_INACTIVE': 'The storage profile for this job is no longer active.',
     
     // Cancel errors
     'JOB_ALREADY_CANCELLED': 'This job has already been cancelled.',
     'JOB_NOT_CANCELLABLE': 'This job cannot be cancelled in its current state.',
-    
-    // Refund errors
-    'JOB_NOT_FAILED': 'Only failed jobs can be refunded.',
-    'JOB_ALREADY_REFUNDED': 'This job has already been refunded.',
-    'INVOICE_NOT_FOUND': 'Invoice not found for this job.',
-    'INVOICE_NOT_PAID': 'Cannot refund an unpaid invoice.',
-    'INVOICE_ALREADY_REFUNDED': 'This invoice has already been refunded.',
 }
 
 export function getJobsErrorMessage(code: string, fallback?: string): string {

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
 import {
     ArrowLeft,
     ArrowRight,
@@ -13,38 +12,20 @@ import {
     Copy,
     Check,
     Loader2,
-    Tag,
-    X,
-    Zap,
-    Clock,
-    AlertCircle,
     Cloud,
 } from 'lucide-react'
-import { formatFileSize, formatInfoHash, formatNCurrency, formatUSD, calculateTorrentHealth, getTimeRemaining } from '@/lib/utils/formatters'
+import { formatFileSize, formatInfoHash, calculateTorrentHealth } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import {
-    Modal,
-    ModalContent,
-    ModalHeader,
-    ModalFooter,
-    ModalTitle,
-    ModalDescription,
-} from '@/components/ui/modal'
 
 import { useTorrentStore } from '@/stores/torrentStore'
-import { useTorrentQuote } from '@/hooks/useTorrents'
-import { useInvoicePayment } from '@/hooks/usePayments'
-import { useWalletBalance } from '@/hooks/useWallet'
+import { useTorrentQuote, useCreateJob } from '@/hooks/useTorrents'
 import { StorageProfileSelector } from '@/components/storage'
 
 export default function TorrentAnalyzePage() {
     const router = useRouter()
     const [copied, setCopied] = useState(false)
-    const [voucherCode, setVoucherCode] = useState('')
-    const [showPaymentModal, setShowPaymentModal] = useState(false)
-    const [showInsufficientModal, setShowInsufficientModal] = useState(false)
 
     // Zustand store
     const {
@@ -59,8 +40,7 @@ export default function TorrentAnalyzePage() {
 
     // API hooks
     const { mutate: getQuote, isPending: isGettingQuote } = useTorrentQuote()
-    const { data: walletData, isLoading: isLoadingBalance } = useWalletBalance()
-    const { mutate: payInvoice, isPending: isPaying } = useInvoicePayment()
+    const { mutate: createJob, isPending: isCreatingJob } = useCreateJob()
 
     // Redirect to upload if no analysis result
     useEffect(() => {
@@ -101,26 +81,12 @@ export default function TorrentAnalyzePage() {
             toast.error('Please select a storage destination')
             return
         }
-        getQuote(voucherCode || undefined)
+        getQuote()
     }
 
-    const handlePay = () => {
+    const handleCreateJob = () => {
         if (!quoteResult) return
-
-        const balance = walletData?.balance ?? 0
-        const finalAmount = quoteResult.finalAmountInUSD
-
-        if (balance < finalAmount) {
-            setShowInsufficientModal(true)
-            return
-        }
-        setShowPaymentModal(true)
-    }
-
-    const confirmPayment = () => {
-        if (!quoteResult) return
-        payInvoice(quoteResult.invoiceId)
-        setShowPaymentModal(false)
+        createJob()
     }
 
     const getHealthColor = (score: number) => {
@@ -128,10 +94,6 @@ export default function TorrentAnalyzePage() {
         if (score >= 50) return 'text-warning'
         return 'text-sage'
     }
-
-    const balance = walletData?.balance ?? 0
-    const finalAmount = quoteResult?.finalAmountInUSD ?? 0
-    const hasInsufficientBalance = quoteResult ? balance < finalAmount : false
 
     return (
         <div className="space-y-6">
@@ -234,58 +196,6 @@ export default function TorrentAnalyzePage() {
                         </CardContent>
                     </Card>
 
-                    {/* Quote Result - Pricing Breakdown */}
-                    {quoteResult && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center justify-between">
-                                    <span>Pricing Breakdown</span>
-                                    {quoteResult.isCached && (
-                                        <Badge variant="warning" className="flex items-center gap-1">
-                                            <Zap className="h-3 w-3" />
-                                            Cached
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">
-                                        Size ({quoteResult.pricingDetails.calculatedSizeInGb.toFixed(2)} GB × ${quoteResult.pricingDetails.baseRatePerGb}/GB)
-                                    </span>
-                                    <span>{formatUSD(quoteResult.pricingDetails.calculatedSizeInGb * quoteResult.pricingDetails.baseRatePerGb)}</span>
-                                </div>
-                                {quoteResult.pricingDetails.regionMultiplier !== 1 && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Region adjustment ({quoteResult.pricingDetails.userRegion})</span>
-                                        <span>×{quoteResult.pricingDetails.regionMultiplier}</span>
-                                    </div>
-                                )}
-                                {quoteResult.pricingDetails.healthMultiplier !== 1 && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Health adjustment</span>
-                                        <span className="text-teal-secondary">×{quoteResult.pricingDetails.healthMultiplier}</span>
-                                    </div>
-                                )}
-                                {quoteResult.pricingDetails.isCacheHit && quoteResult.pricingDetails.cacheDiscountAmount > 0 && (
-                                    <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground flex items-center gap-1">
-                                            <Zap className="h-3.5 w-3.5 text-warning" />
-                                            Cache discount
-                                        </span>
-                                        <span className="text-teal-secondary">-{formatUSD(quoteResult.pricingDetails.cacheDiscountAmount)}</span>
-                                    </div>
-                                )}
-                                <div className="border-t pt-3">
-                                    <div className="flex justify-between">
-                                        <span className="font-medium">Total</span>
-                                        <span className="text-2xl font-bold text-primary">{formatUSD(quoteResult.finalAmountInUSD)}</span>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    )}
-
                     {/* Storage Profile Selection */}
                     {!quoteResult && (
                         <Card>
@@ -302,25 +212,28 @@ export default function TorrentAnalyzePage() {
                         </Card>
                     )}
 
-                    {/* Voucher Input */}
-                    {!quoteResult && (
+                    {/* Quote Result Summary */}
+                    {quoteResult && (
                         <Card>
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Tag className="h-5 w-5" />
-                                    Voucher Code
-                                </CardTitle>
-                                <CardDescription>Have a voucher? Enter it before getting a quote</CardDescription>
+                                <CardTitle>Ready to Download</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <div className="flex gap-2">
-                                    <Input
-                                        placeholder="Enter voucher code"
-                                        value={voucherCode}
-                                        onChange={(e) => setVoucherCode(e.target.value)}
-                                        className="flex-1"
-                                    />
+                            <CardContent className="space-y-3">
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">File Name</span>
+                                    <span className="font-medium">{quoteResult.fileName}</span>
                                 </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Size</span>
+                                    <span className="font-medium">{formatFileSize(quoteResult.sizeInBytes)}</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Selected Files</span>
+                                    <span className="font-medium">{quoteResult.selectedFiles.length} files</span>
+                                </div>
+                                {quoteResult.message && (
+                                    <p className="text-sm text-muted-foreground">{quoteResult.message}</p>
+                                )}
                             </CardContent>
                         </Card>
                     )}
@@ -361,11 +274,11 @@ export default function TorrentAnalyzePage() {
                         </CardContent>
                     </Card>
 
-                    {/* Selection Summary / Quote / Payment */}
-                    <Card className={cn(quoteResult && hasInsufficientBalance && 'border-sage/50')}>
+                    {/* Selection Summary / Create Job */}
+                    <Card>
                         <CardHeader>
                             <CardTitle className="text-base">
-                                {quoteResult ? 'Payment' : 'Selection Summary'}
+                                {quoteResult ? 'Create Download Job' : 'Selection Summary'}
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
@@ -400,36 +313,27 @@ export default function TorrentAnalyzePage() {
                             ) : (
                                 <>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Your balance</span>
-                                        <span className="font-medium">
-                                            {isLoadingBalance ? '...' : formatNCurrency(balance)}
-                                        </span>
+                                        <span className="text-muted-foreground">Files to download</span>
+                                        <span className="font-medium">{quoteResult.selectedFiles.length}</span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Invoice amount</span>
-                                        <span className="font-medium">{formatNCurrency(finalAmount)}</span>
+                                        <span className="text-muted-foreground">Total size</span>
+                                        <span className="font-medium">{formatFileSize(quoteResult.sizeInBytes)}</span>
                                     </div>
-                                    <div className="flex items-center justify-between border-t pt-2">
-                                        <span className="text-muted-foreground">Balance after</span>
-                                        <span className={cn(
-                                            'font-medium',
-                                            hasInsufficientBalance ? 'text-sage' : 'text-teal-secondary'
-                                        )}>
-                                            {formatNCurrency(balance - finalAmount)}
-                                        </span>
-                                    </div>
-
-                                    {hasInsufficientBalance && (
-                                        <div className="flex items-start gap-2 rounded-lg bg-sage/10 p-3 text-sm">
-                                            <AlertCircle className="h-4 w-4 shrink-0 text-sage mt-0.5" />
-                                            <p className="text-sage">
-                                                Insufficient balance. You need {formatNCurrency(finalAmount - balance)} more.
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <Button onClick={handlePay} className="w-full" size="lg">
-                                        {hasInsufficientBalance ? 'Add Funds to Pay' : `Pay ${formatNCurrency(finalAmount)}`}
+                                    <Button 
+                                        onClick={handleCreateJob} 
+                                        className="w-full" 
+                                        size="lg"
+                                        disabled={isCreatingJob}
+                                    >
+                                        {isCreatingJob ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Creating Job...
+                                            </>
+                                        ) : (
+                                            'Create Download Job'
+                                        )}
                                     </Button>
                                 </>
                             )}
@@ -437,63 +341,6 @@ export default function TorrentAnalyzePage() {
                     </Card>
                 </div>
             </div>
-
-            {/* Payment Confirmation Modal */}
-            <Modal open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-                <ModalContent>
-                    <ModalHeader>
-                        <ModalTitle>Confirm Payment</ModalTitle>
-                        <ModalDescription>
-                            You are about to pay {formatNCurrency(finalAmount)} for this download.
-                        </ModalDescription>
-                    </ModalHeader>
-                    <div className="space-y-2 py-4">
-                        <div className="flex justify-between text-sm">
-                            <span>File</span>
-                            <span className="font-medium">{quoteResult?.fileName}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                            <span>Amount</span>
-                            <span className="font-medium">{formatNCurrency(finalAmount)}</span>
-                        </div>
-                    </div>
-                    <ModalFooter>
-                        <Button variant="outline" onClick={() => setShowPaymentModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button onClick={confirmPayment} disabled={isPaying}>
-                            {isPaying ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Processing...
-                                </>
-                            ) : (
-                                'Confirm Payment'
-                            )}
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
-
-            {/* Insufficient Balance Modal */}
-            <Modal open={showInsufficientModal} onOpenChange={setShowInsufficientModal}>
-                <ModalContent>
-                    <ModalHeader>
-                        <ModalTitle>Insufficient Balance</ModalTitle>
-                        <ModalDescription>
-                            You need {formatNCurrency(finalAmount - balance)} more to complete this payment.
-                        </ModalDescription>
-                    </ModalHeader>
-                    <ModalFooter>
-                        <Button variant="outline" onClick={() => setShowInsufficientModal(false)}>
-                            Cancel
-                        </Button>
-                        <Button asChild>
-                            <Link href="/wallet/deposits/new">Add Funds</Link>
-                        </Button>
-                    </ModalFooter>
-                </ModalContent>
-            </Modal>
         </div>
     )
 }

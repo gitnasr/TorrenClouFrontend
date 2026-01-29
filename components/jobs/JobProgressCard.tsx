@@ -42,3 +42,5 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
     )
 }
 
+
+

@@ -34,3 +34,5 @@ export function JobSuccessCard({ job }: JobSuccessCardProps) {
     )
 }
 
+
+

@@ -3,10 +3,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { analyzeTorrentFile, getTorrentQuote, getTorrentErrorMessage } from '@/lib/api/torrents'
+import { analyzeTorrentFile, getTorrentQuote, createJob, getTorrentErrorMessage } from '@/lib/api/torrents'
 import { useTorrentStore } from '@/stores/torrentStore'
-import type { TorrentInfo, QuoteResponse } from '@/types/torrents'
+import type { TorrentInfo, QuoteResponse, JobCreationResult } from '@/types/torrents'
 import { AxiosError } from 'axios'
+import { jobsKeys } from './useJobs'
 
 // ============================================
 // Query Keys
@@ -76,14 +77,13 @@ export function useTorrentAnalysis() {
 
 /**
  * Hook for getting torrent quotes
- * Handles file selection → quote request → redirect to invoice flow
+ * Handles file selection → quote request flow
  */
 export function useTorrentQuote() {
-    const router = useRouter()
     const { setQuoteResult, torrentFile, selectedFilePaths, selectedStorageProfileId } = useTorrentStore()
 
     return useMutation({
-        mutationFn: async (voucherCode?: string): Promise<QuoteResponse> => {
+        mutationFn: async (): Promise<QuoteResponse> => {
             if (!torrentFile) {
                 throw new Error('No torrent file available')
             }
@@ -93,14 +93,12 @@ export function useTorrentQuote() {
             if (!selectedStorageProfileId) {
                 throw new Error('Please select a storage profile')
             }
-            return getTorrentQuote(torrentFile, selectedFilePaths, selectedStorageProfileId, voucherCode)
+            return getTorrentQuote(torrentFile, selectedFilePaths, selectedStorageProfileId)
         },
         onSuccess: (data) => {
-            // Store quote result for invoice page
+            // Store quote result
             setQuoteResult(data)
-            toast.success('Quote received! Redirecting to invoice...')
-            // Redirect to the invoice page
-            router.push(`/invoices/${data.invoiceId}`)
+            toast.success('Quote received!')
         },
         onError: (error) => {
             const message = handleTorrentError(error)
@@ -109,3 +107,46 @@ export function useTorrentQuote() {
     })
 }
 
+/**
+ * Hook for creating a job directly from a quote
+ * Handles quote → job creation → navigation flow
+ */
+export function useCreateJob() {
+    const router = useRouter()
+    const queryClient = useQueryClient()
+    const { clearTorrentData, quoteResult, selectedStorageProfileId } = useTorrentStore()
+
+    return useMutation({
+        mutationFn: async (): Promise<JobCreationResult> => {
+            if (!quoteResult) {
+                throw new Error('No quote available')
+            }
+            return createJob(
+                quoteResult.torrentFileId,
+                quoteResult.selectedFiles,
+                selectedStorageProfileId || undefined
+            )
+        },
+        onSuccess: (data) => {
+            // Invalidate jobs query
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+
+            // Clear torrent workflow data
+            clearTorrentData()
+
+            // Show success message
+            if (data.hasStorageProfileWarning && data.storageProfileWarningMessage) {
+                toast.warning(data.storageProfileWarningMessage)
+            } else {
+                toast.success('Job created successfully!')
+            }
+
+            // Navigate to jobs page
+            router.push('/jobs')
+        },
+        onError: (error) => {
+            const message = handleTorrentError(error)
+            toast.error(message)
+        },
+    })
+}

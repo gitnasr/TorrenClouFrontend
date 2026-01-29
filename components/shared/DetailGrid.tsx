@@ -83,3 +83,5 @@ export function DetailRow({ icon, label, value }: DetailRowProps) {
     )
 }
 
+
+

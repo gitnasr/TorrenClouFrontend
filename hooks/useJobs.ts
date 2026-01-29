@@ -11,15 +11,11 @@ import {
     getJobTimeline,
     retryJob,
     cancelJob,
-    refundJob,
-    adminRetryJob,
-    adminCancelJob,
 } from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics, JobTimelineEntry } from '@/types/jobs'
+import type { JobsQueryParams } from '@/types/jobs'
 import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema, getJobsErrorMessage } from '@/types/jobs'
 import { z } from 'zod'
-import { walletKeys } from './useWallet'
 
 // ============================================
 // Query Keys
@@ -156,7 +152,7 @@ export function useJobTimeline(jobId: number | null) {
         refetchOnMount: true,
         refetchOnReconnect: true,
         // Poll every 10 seconds only if job is active
-        refetchInterval: (query) => {
+        refetchInterval: () => {
             if (!jobData) return false
             const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'TORRENT_DOWNLOAD_RETRY', 'UPLOAD_RETRY'].includes(jobData.status)
             return isActive ? 10 * 1000 : false
@@ -222,14 +218,14 @@ function handleJobActionError(error: unknown): string {
 // ============================================
 
 /**
- * Hook for retrying a failed job (user endpoint)
+ * Hook for retrying a failed job
  */
 export function useRetryJob() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: retryJob,
-        onSuccess: (_data, jobId) => {
+        onSuccess: () => {
             // Invalidate job queries to refresh data
             queryClient.invalidateQueries({ queryKey: jobsKeys.all })
             toast.success('Job retry initiated successfully')
@@ -242,19 +238,17 @@ export function useRetryJob() {
 }
 
 /**
- * Hook for cancelling an active job (user endpoint)
+ * Hook for cancelling an active job
  */
 export function useCancelJob() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: cancelJob,
-        onSuccess: (_data, jobId) => {
+        onSuccess: () => {
             // Invalidate job queries to refresh data
             queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            // Also invalidate wallet balance as refund may have been processed
-            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
-            toast.success('Job cancelled successfully. Refund processed automatically.')
+            toast.success('Job cancelled successfully')
         },
         onError: (error) => {
             const message = handleJobActionError(error)
@@ -262,66 +256,3 @@ export function useCancelJob() {
         },
     })
 }
-
-/**
- * Hook for requesting a refund for a failed job (user endpoint)
- */
-export function useRefundJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: refundJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            // Also invalidate wallet balance as refund has been added
-            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
-            toast.success('Refund processed successfully')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to process refund', { description: message })
-        },
-    })
-}
-
-/**
- * Hook for retrying any user's failed job (admin endpoint)
- */
-export function useAdminRetryJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: adminRetryJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            toast.success('Job retry initiated successfully (Admin)')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to retry job', { description: message })
-        },
-    })
-}
-
-/**
- * Hook for cancelling any user's active job (admin endpoint)
- */
-export function useAdminCancelJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: adminCancelJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            toast.success('Job cancelled successfully (Admin)')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to cancel job', { description: message })
-        },
-    })
-}
-

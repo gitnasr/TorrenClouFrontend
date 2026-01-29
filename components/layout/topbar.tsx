@@ -14,35 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Moon, Sun, LogOut, User } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import apiClient from '@/lib/axios'
-import { Skeleton } from '@/components/ui/skeleton'
-
-function WalletBalance() {
-  const { data: session } = useSession()
-  const { data: balance, isLoading } = useQuery<number>({
-    queryKey: ['wallet-balance'],
-    queryFn: async () => {
-      const response = await apiClient.get<{ balance: number }>('finance/wallet/balance')
-      return response.data.balance
-    },
-    enabled: !!session?.backendToken,
-    refetchInterval: 30000, // Refetch every 30 seconds
-  })
-
-  if (isLoading) {
-    return <Skeleton className="h-6 w-20" />
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-muted-foreground">Balance:</span>
-      <span className="text-lg font-semibold text-primary">
-        ${balance?.toFixed(2) || '0.00'}
-      </span>
-    </div>
-  )
-}
 
 export function Topbar() {
   const { data: session } = useSession()
@@ -60,10 +31,7 @@ export function Topbar() {
     .toUpperCase() || 'U'
 
   return (
-    <div className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      <div className="flex items-center gap-6">
-        <WalletBalance />
-      </div>
+    <div className="flex h-16 items-center justify-end border-b border-border bg-card px-6">
       <div className="flex items-center gap-4">
         <Button
           variant="ghost"
@@ -116,5 +84,3 @@ export function Topbar() {
     </div>
   )
 }
-
-
