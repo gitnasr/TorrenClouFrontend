@@ -39,11 +39,11 @@ export function JobDetailsCard({ job }: JobDetailsCardProps) {
                     <div>
                         <p className="text-sm text-muted-foreground">Selected Files</p>
                         <p className="font-medium">
-                            {job.selectedFilePaths.length === 0
+                            {!job.selectedFilePaths || job.selectedFilePaths.length === 0
                                 ? 'All files'
                                 : `${job.selectedFilePaths.length} file${job.selectedFilePaths.length > 1 ? 's' : ''}`}
                         </p>
-                        {job.selectedFilePaths.length > 0 && job.selectedFilePaths.length <= 10 && (
+                        {job.selectedFilePaths && job.selectedFilePaths.length > 0 && job.selectedFilePaths.length <= 10 && (
                             <p className="text-xs text-muted-foreground mt-1">
                                 {job.selectedFilePaths.slice(0, 5).map(p => p.split('/').pop()).join(', ')}{job.selectedFilePaths.length > 5 ? '...' : ''}
                             </p>

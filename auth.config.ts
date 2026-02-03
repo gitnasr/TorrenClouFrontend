@@ -23,7 +23,7 @@ export const authConfig = {
             rejectUnauthorized: false, // Allow self-signed certificates for localhost
           })
 
-          const baseUrl = process.env.BACKEND_URL || 'https://localhost:7185'
+          const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000'
           const response = await axios.post<BackendAuthResponse>(
             `${baseUrl}/api/auth/login`,
             {

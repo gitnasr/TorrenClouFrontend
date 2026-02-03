@@ -1,5 +1,6 @@
 export { StorageProfileCard } from './StorageProfileCard'
-export { ConnectGoogleDriveButton } from './ConnectGoogleDriveButton'
+export { GoogleDriveConfigForm } from './GoogleDriveConfigForm'
+export { S3ConfigForm } from './S3ConfigForm'
 export { StorageProfilesList } from './StorageProfilesList'
 export { StorageProfileSelector } from './StorageProfileSelector'
 

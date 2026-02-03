@@ -2,11 +2,11 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatDateTime } from '@/lib/utils/formatters'
-import type { StorageProfile } from '@/types/storage'
+import type { StorageProfileDetail } from '@/types/storage'
 import { getStorageProviderConfig } from './StorageProviderConfig'
 
 interface StorageDetailsCardProps {
-    profile: StorageProfile
+    profile: StorageProfileDetail
 }
 
 export function StorageDetailsCard({ profile }: StorageDetailsCardProps) {

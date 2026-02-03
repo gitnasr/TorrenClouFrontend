@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
@@ -11,7 +11,7 @@ import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 
-export default function StoragePage() {
+function OAuthCallbackHandler() {
     const searchParams = useSearchParams()
     const router = useRouter()
     const queryClient = useQueryClient()
@@ -44,8 +44,17 @@ export default function StoragePage() {
         }
     }, [searchParams, router, queryClient])
 
+    return null
+}
+
+export default function StoragePage() {
     return (
         <div className="space-y-8">
+            {/* OAuth Callback Handler */}
+            <Suspense fallback={null}>
+                <OAuthCallbackHandler />
+            </Suspense>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

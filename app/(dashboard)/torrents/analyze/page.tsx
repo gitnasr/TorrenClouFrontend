@@ -20,7 +20,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
 import { useTorrentStore } from '@/stores/torrentStore'
-import { useTorrentQuote, useCreateJob } from '@/hooks/useTorrents'
+import { useStartDownload } from '@/hooks/useTorrents'
 import { StorageProfileSelector } from '@/components/storage'
 
 export default function TorrentAnalyzePage() {
@@ -31,16 +31,14 @@ export default function TorrentAnalyzePage() {
     const {
         analysisResult,
         selectedFilePaths,
-        quoteResult,
         toggleFileSelection,
         selectAllFiles,
         deselectAllFiles,
         selectedStorageProfileId,
     } = useTorrentStore()
 
-    // API hooks
-    const { mutate: getQuote, isPending: isGettingQuote } = useTorrentQuote()
-    const { mutate: createJob, isPending: isCreatingJob } = useCreateJob()
+    // API hook - combined analyze + createJob
+    const startDownload = useStartDownload()
 
     // Redirect to upload if no analysis result
     useEffect(() => {
@@ -72,7 +70,7 @@ export default function TorrentAnalyzePage() {
         setTimeout(() => setCopied(false), 2000)
     }
 
-    const handleGetQuote = () => {
+    const handleStartDownload = () => {
         if (selectedFilePaths.length === 0) {
             toast.error('Please select at least one file')
             return
@@ -81,12 +79,7 @@ export default function TorrentAnalyzePage() {
             toast.error('Please select a storage destination')
             return
         }
-        getQuote()
-    }
-
-    const handleCreateJob = () => {
-        if (!quoteResult) return
-        createJob()
+        startDownload.mutate()
     }
 
     const getHealthColor = (score: number) => {
@@ -197,46 +190,18 @@ export default function TorrentAnalyzePage() {
                     </Card>
 
                     {/* Storage Profile Selection */}
-                    {!quoteResult && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Cloud className="h-5 w-5" />
-                                    Storage Destination
-                                </CardTitle>
-                                <CardDescription>Select where to upload your files</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <StorageProfileSelector />
-                            </CardContent>
-                        </Card>
-                    )}
-
-                    {/* Quote Result Summary */}
-                    {quoteResult && (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Ready to Download</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-3">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">File Name</span>
-                                    <span className="font-medium">{quoteResult.fileName}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Size</span>
-                                    <span className="font-medium">{formatFileSize(quoteResult.sizeInBytes)}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Selected Files</span>
-                                    <span className="font-medium">{quoteResult.selectedFiles.length} files</span>
-                                </div>
-                                {quoteResult.message && (
-                                    <p className="text-sm text-muted-foreground">{quoteResult.message}</p>
-                                )}
-                            </CardContent>
-                        </Card>
-                    )}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Cloud className="h-5 w-5" />
+                                Storage Destination
+                            </CardTitle>
+                            <CardDescription>Select where to upload your files</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <StorageProfileSelector />
+                        </CardContent>
+                    </Card>
                 </div>
 
                 {/* Sidebar */}
@@ -274,69 +239,38 @@ export default function TorrentAnalyzePage() {
                         </CardContent>
                     </Card>
 
-                    {/* Selection Summary / Create Job */}
+                    {/* Start Download */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-base">
-                                {quoteResult ? 'Create Download Job' : 'Selection Summary'}
-                            </CardTitle>
+                            <CardTitle className="text-base">Start Download</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {!quoteResult ? (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Selected files</span>
-                                        <span className="font-medium">{selectedFilePaths.length}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Total size</span>
-                                        <span className="font-medium">{formatFileSize(selectedSize)}</span>
-                                    </div>
-                                    <Button
-                                        onClick={handleGetQuote}
-                                        className="w-full"
-                                        disabled={selectedFilePaths.length === 0 || !selectedStorageProfileId || isGettingQuote}
-                                    >
-                                        {isGettingQuote ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Getting Quote...
-                                            </>
-                                        ) : (
-                                            <>
-                                                Get Quote
-                                                <ArrowRight className="ml-2 h-4 w-4" />
-                                            </>
-                                        )}
-                                    </Button>
-                                </>
-                            ) : (
-                                <>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Files to download</span>
-                                        <span className="font-medium">{quoteResult.selectedFiles.length}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-muted-foreground">Total size</span>
-                                        <span className="font-medium">{formatFileSize(quoteResult.sizeInBytes)}</span>
-                                    </div>
-                                    <Button 
-                                        onClick={handleCreateJob} 
-                                        className="w-full" 
-                                        size="lg"
-                                        disabled={isCreatingJob}
-                                    >
-                                        {isCreatingJob ? (
-                                            <>
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                                Creating Job...
-                                            </>
-                                        ) : (
-                                            'Create Download Job'
-                                        )}
-                                    </Button>
-                                </>
-                            )}
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Selected files</span>
+                                <span className="font-medium">{selectedFilePaths.length}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Total size</span>
+                                <span className="font-medium">{formatFileSize(selectedSize)}</span>
+                            </div>
+                            <Button
+                                onClick={handleStartDownload}
+                                className="w-full"
+                                size="lg"
+                                disabled={selectedFilePaths.length === 0 || !selectedStorageProfileId || startDownload.isPending}
+                            >
+                                {startDownload.isPending ? (
+                                    <>
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        Starting Download...
+                                    </>
+                                ) : (
+                                    <>
+                                        Start Download
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </>
+                                )}
+                            </Button>
                         </CardContent>
                     </Card>
                 </div>

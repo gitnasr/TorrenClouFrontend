@@ -1,57 +1,6 @@
 // Utility functions for formatting
 import { format, formatDistanceToNow, parseISO, differenceInMinutes } from 'date-fns'
 
-// Exchange rate for charging: 1 N = 1 USD (used during wallet operations)
-// Note: Actual exchange rate for invoices comes from backend at time of invoice generation
-export const CHARGING_EXCHANGE_RATE = 1.0 // 1 N = 1 USD for charging purposes
-export const CURRENCY_SYMBOL = 'N'
-export const CURRENCY_NAME = 'N Coins'
-
-/**
- * Format N currency amount
- */
-export function formatNCurrency(amount: number): string {
-    return `${amount.toFixed(2)} N`
-}
-
-/**
- * Format N currency with USD equivalent (uses invoice exchange rate)
- * Only use this for displaying invoice amounts, not for charging
- */
-export function formatNCurrencyWithUSD(amountInN: number, exchangeRate: number): string {
-    const usdAmount = amountInN * exchangeRate
-    return `${amountInN.toFixed(2)} N (~$${usdAmount.toFixed(2)} USD)`
-}
-
-/**
- * Convert USD to N coins at given exchange rate
- */
-export function usdToN(amountUSD: number, exchangeRate: number = CHARGING_EXCHANGE_RATE): number {
-    return amountUSD / exchangeRate
-}
-
-/**
- * Convert N coins to USD at given exchange rate
- */
-export function nToUSD(amountN: number, exchangeRate: number = CHARGING_EXCHANGE_RATE): number {
-    return amountN * exchangeRate
-}
-
-/**
- * Format currency amount with currency symbol (legacy USD support)
- */
-export function formatCurrency(amount: number, currency: string = 'N'): string {
-    if (currency === 'N') {
-        return formatNCurrency(amount)
-    }
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: currency === 'N' ? 'USD' : currency,
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(amount)
-}
-
 /**
  * Format file size in human-readable format
  */
@@ -168,25 +117,6 @@ export function getInitials(name: string): string {
 }
 
 /**
- * Format exchange rate display (e.g., "1 N = $1.00 USD")
- */
-export function formatExchangeRate(rate: number): string {
-    return `1 N = $${rate.toFixed(2)} USD`
-}
-
-/**
- * Format USD amount for display
- */
-export function formatUSD(amount: number): string {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    }).format(amount)
-}
-
-/**
  * Calculate torrent health from scrape results
  * Matches backend TorrentHealthService logic:
  * - Health score: 50% seeders count, 30% seeder/leecher ratio, 20% completeness
@@ -270,4 +200,3 @@ const regionNames: Record<string, string> = {
 export function formatRegion(regionCode: string): string {
     return regionNames[regionCode] || regionCode
 }
-

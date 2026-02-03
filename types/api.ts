@@ -82,16 +82,16 @@ export interface TorrentAnalysis {
 }
 
 // ============================================
-// Quote Models (Updated - No Pricing)
+// Analyze Models
 // ============================================
 
-export interface QuoteRequest {
+export interface AnalyzeRequest {
   selectedFilePaths?: string[] | null
   storageProfileId: number
   torrentFile: File
 }
 
-export interface QuoteResponse {
+export interface AnalyzeResponse {
   fileName: string
   sizeInBytes: number
   infoHash: string
@@ -121,6 +121,16 @@ export interface GoogleDriveAuthResponse {
 // ============================================
 // Job Models
 // ============================================
+
+// Legacy type for backward compatibility
+export interface TorrentJob {
+  id: string
+  filename: string
+  size: number
+  status: 'Downloading' | 'Uploading' | 'Completed' | 'Failed'
+  progress: number
+  createdAt: string
+}
 
 export interface UserJob {
   id: number

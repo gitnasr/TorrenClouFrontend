@@ -35,14 +35,7 @@ export const statusColors: Record<StatusType, string> = {
     default: COLORS.primary,
 }
 
-// Badge variant mappings for different entity statuses
-export const depositStatusBadgeVariant = {
-    Pending: 'warning' as const,
-    Completed: 'success' as const,
-    Failed: 'destructive' as const,
-    Expired: 'destructive' as const,
-}
-
+// Badge variant mappings for job statuses
 export const jobStatusBadgeVariant = {
     Queued: 'pending' as const,
     Downloading: 'processing' as const,
@@ -52,13 +45,4 @@ export const jobStatusBadgeVariant = {
     Completed: 'success' as const,
     Failed: 'destructive' as const,
     Cancelled: 'secondary' as const,
-}
-
-export const transactionTypeBadgeVariant = {
-    Deposit: 'success' as const,
-    Payment: 'destructive' as const,
-    Refund: 'secondary' as const,
-    AdminAdjustment: 'warning' as const,
-    Bonus: 'warning' as const,
-    Deduction: 'destructive' as const,
 }

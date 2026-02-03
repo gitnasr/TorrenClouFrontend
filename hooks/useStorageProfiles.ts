@@ -8,9 +8,10 @@ import {
     setDefaultStorageProfile,
     disconnectStorageProfile,
     connectGoogleDriveWithPopup,
+    configureS3,
 } from '@/lib/api/storage'
 import { getStorageErrorMessage } from '@/types/storage'
-import type { StorageProfile } from '@/types/storage'
+import type { StorageProfile, ConfigureGoogleDriveRequest, ConfigureS3Request } from '@/types/storage'
 import { useStorageProfilesStore } from '@/stores/storageProfilesStore'
 import { toast } from 'sonner'
 
@@ -62,7 +63,7 @@ export function useStorageProfile(profileId: number) {
 // ============================================
 
 /**
- * Hook to connect Google Drive via OAuth popup
+ * Hook to connect Google Drive via OAuth popup with user-provided credentials
  */
 export function useConnectGoogleDrive() {
     const queryClient = useQueryClient()
@@ -70,14 +71,14 @@ export function useConnectGoogleDrive() {
         setConnecting,
         setConnectionError,
         closeConnectModal,
-        resetProfileName
     } = useStorageProfilesStore()
 
     return useMutation({
-        mutationFn: (profileName?: string) => connectGoogleDriveWithPopup(profileName),
+        mutationFn: (config: ConfigureGoogleDriveRequest) => connectGoogleDriveWithPopup(config),
 
         onMutate: () => {
             setConnecting(true)
+            setConnectionError(null)
         },
 
         onSuccess: (profileId) => {
@@ -86,16 +87,56 @@ export function useConnectGoogleDrive() {
             queryClient.invalidateQueries({ queryKey: storageProfileKeys.list() })
             // Prefetch the new profile
             queryClient.invalidateQueries({ queryKey: storageProfileKeys.detail(profileId) })
-            // Close modal and reset form
+            // Close modal
             closeConnectModal()
-            resetProfileName()
             toast.success('Google Drive connected successfully!')
         },
 
         onError: (error: Error) => {
+            setConnecting(false)
             const errorMessage = getStorageErrorMessage(error.message, error.message)
             setConnectionError(errorMessage)
             toast.error('Connection Failed', { description: errorMessage })
+        },
+    })
+}
+
+/**
+ * Hook to configure S3-compatible storage
+ * Supports AWS S3, Backblaze B2, Cloudflare R2, and other S3-compatible providers
+ */
+export function useConfigureS3() {
+    const queryClient = useQueryClient()
+    const {
+        setConnecting,
+        setConnectionError,
+        closeConnectModal,
+    } = useStorageProfilesStore()
+
+    return useMutation({
+        mutationFn: (config: ConfigureS3Request) => configureS3(config),
+
+        onMutate: () => {
+            setConnecting(true)
+            setConnectionError(null)
+        },
+
+        onSuccess: (result) => {
+            setConnecting(false)
+            // Invalidate and refetch profiles list
+            queryClient.invalidateQueries({ queryKey: storageProfileKeys.list() })
+            // Prefetch the new profile
+            queryClient.invalidateQueries({ queryKey: storageProfileKeys.detail(result.storageProfileId) })
+            // Close modal
+            closeConnectModal()
+            toast.success('S3 storage configured successfully!')
+        },
+
+        onError: (error: Error) => {
+            setConnecting(false)
+            const errorMessage = getStorageErrorMessage(error.message, error.message)
+            setConnectionError(errorMessage)
+            toast.error('Configuration Failed', { description: errorMessage })
         },
     })
 }

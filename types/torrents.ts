@@ -64,10 +64,10 @@ export const torrentInfoSchema = z.object({
 export type TorrentInfo = z.infer<typeof torrentInfoSchema>
 
 // ============================================
-// Quote Response Schema (Updated - No Pricing)
+// Analyze Response Schema
 // ============================================
 
-export const quoteResponseSchema = z.object({
+export const analyzeResponseSchema = z.object({
     fileName: z.string(),
     sizeInBytes: z.number(),
     infoHash: z.string(),
@@ -77,7 +77,7 @@ export const quoteResponseSchema = z.object({
     message: z.string().nullable().optional(),
 })
 
-export type QuoteResponse = z.infer<typeof quoteResponseSchema>
+export type AnalyzeResponse = z.infer<typeof analyzeResponseSchema>
 
 // ============================================
 // Create Job Request Schema

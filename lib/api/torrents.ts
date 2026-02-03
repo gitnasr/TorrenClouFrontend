@@ -2,15 +2,15 @@
 import apiClient from '../axios'
 import {
     torrentInfoSchema,
-    quoteResponseSchema,
+    analyzeResponseSchema,
     jobCreationResultSchema,
     type TorrentInfo,
-    type QuoteResponse,
+    type AnalyzeResponse,
     type JobCreationResult,
 } from '@/types/torrents'
 
 // Re-export types for convenience
-export type { TorrentInfo, QuoteResponse, JobCreationResult }
+export type { TorrentInfo, AnalyzeResponse, JobCreationResult }
 export { getTorrentErrorMessage, torrentErrorMessages } from '@/types/torrents'
 
 /**
@@ -38,19 +38,19 @@ export async function analyzeTorrentFile(file: File): Promise<TorrentInfo> {
 }
 
 /**
- * Get a quote for downloading selected files from a torrent
- * POST /api/torrents/quote (authenticated)
- * 
+ * Analyze selected files from a torrent for job creation
+ * POST /api/torrents/analyze (authenticated)
+ *
  * @param torrentFile - The .torrent file
  * @param selectedFilePaths - Array of file paths to download (null = all files)
  * @param storageProfileId - ID of the storage profile to use for upload
- * @returns Quote with torrent metadata and torrentFileId for job creation
+ * @returns Analysis result with torrent metadata and torrentFileId for job creation
  */
-export async function getTorrentQuote(
+export async function getTorrentAnalysis(
     torrentFile: File,
     selectedFilePaths: string[] | null,
     storageProfileId: number
-): Promise<QuoteResponse> {
+): Promise<AnalyzeResponse> {
     const formData = new FormData()
     formData.append('torrentFile', torrentFile)
     formData.append('storageProfileId', storageProfileId.toString())
@@ -62,8 +62,8 @@ export async function getTorrentQuote(
         })
     }
 
-    const response = await apiClient.post<QuoteResponse>(
-        '/torrents/quote',
+    const response = await apiClient.post<AnalyzeResponse>(
+        '/torrents/analyze',
         formData,
         {
             headers: {
@@ -72,7 +72,7 @@ export async function getTorrentQuote(
         }
     )
 
-    return quoteResponseSchema.parse(response.data)
+    return analyzeResponseSchema.parse(response.data)
 }
 
 /**

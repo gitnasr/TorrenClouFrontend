@@ -5,20 +5,25 @@ import {
     StorageProfileDetailSchema,
     StorageProfilesArraySchema,
     GoogleDriveConnectResponseSchema,
+    ConfigureGoogleDriveRequestSchema,
+    ConfigureS3RequestSchema,
 } from '@/types/storage'
 import type {
     StorageProfile,
     StorageProfileDetail,
     GoogleDriveConnectResponse,
+    ConfigureGoogleDriveRequest,
+    ConfigureS3Request,
 } from '@/types/storage'
 
 // Re-export types for convenience
-export type { StorageProfile, StorageProfileDetail, GoogleDriveConnectResponse }
+export type { StorageProfile, StorageProfileDetail, GoogleDriveConnectResponse, ConfigureGoogleDriveRequest, ConfigureS3Request }
 export { getStorageErrorMessage, storageErrorMessages } from '@/types/storage'
 
 /**
- * Get Google OAuth authorization URL
+ * Get Google OAuth authorization URL (Legacy - uses environment credentials)
  * @param profileName Optional custom name for this storage connection (3-50 characters)
+ * @deprecated Use configureGoogleDrive instead which allows user-provided credentials
  */
 export async function getGoogleDriveAuthUrl(profileName?: string): Promise<GoogleDriveConnectResponse> {
     const url = profileName
@@ -27,6 +32,55 @@ export async function getGoogleDriveAuthUrl(profileName?: string): Promise<Googl
 
     const response = await apiClient.get<GoogleDriveConnectResponse>(url)
     return GoogleDriveConnectResponseSchema.parse(response.data)
+}
+
+/**
+ * Configure Google Drive with user-provided OAuth credentials
+ * POST /api/storage/gdrive/configure
+ *
+ * @param config - User's Google OAuth credentials (clientId, clientSecret, redirectUri)
+ * @returns Authorization URL to complete OAuth flow
+ */
+export async function configureGoogleDrive(
+    config: ConfigureGoogleDriveRequest
+): Promise<GoogleDriveConnectResponse> {
+    // Validate request before sending
+    const validatedConfig = ConfigureGoogleDriveRequestSchema.parse(config)
+
+    const response = await apiClient.post<GoogleDriveConnectResponse>(
+        '/storage/gdrive/configure',
+        validatedConfig
+    )
+    return GoogleDriveConnectResponseSchema.parse(response.data)
+}
+
+/**
+ * Storage profile result from S3 configuration
+ */
+interface S3ConfigureResult {
+    success: boolean
+    storageProfileId: number
+    message: string
+}
+
+/**
+ * Configure S3-compatible storage with user-provided credentials
+ * POST /api/storage/configure-s3
+ *
+ * Supports AWS S3, Backblaze B2, Cloudflare R2, and other S3-compatible providers
+ *
+ * @param config - S3 credentials and bucket configuration
+ * @returns Storage profile ID on success
+ */
+export async function configureS3(config: ConfigureS3Request): Promise<S3ConfigureResult> {
+    // Validate request before sending
+    const validatedConfig = ConfigureS3RequestSchema.parse(config)
+
+    const response = await apiClient.post<S3ConfigureResult>(
+        '/storage/configure-s3',
+        validatedConfig
+    )
+    return response.data
 }
 
 /**
@@ -60,17 +114,17 @@ export async function disconnectStorageProfile(id: number): Promise<void> {
 }
 
 /**
- * Opens Google OAuth in a popup window
+ * Opens Google OAuth in a popup window using user-provided credentials
  * Backend will redirect to /storage?success=true&profileId=123 or /storage?error=...&message=...
  * The popup detects this redirect and closes itself
- * @param profileName Optional custom name for this storage connection
+ * @param config User's Google OAuth credentials
  * @returns Promise that resolves with the profile ID on success
  */
-export function connectGoogleDriveWithPopup(profileName?: string): Promise<number> {
+export function connectGoogleDriveWithPopup(config: ConfigureGoogleDriveRequest): Promise<number> {
     return new Promise(async (resolve, reject) => {
         try {
-            // Get authorization URL with optional profile name
-            const { authorizationUrl } = await getGoogleDriveAuthUrl(profileName)
+            // Get authorization URL with user credentials
+            const { authorizationUrl } = await configureGoogleDrive(config)
 
             // Open popup window
             const width = 500
