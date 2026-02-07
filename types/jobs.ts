@@ -75,7 +75,7 @@ export const jobSchema = z.object({
     updatedAt: z.string().datetime().nullable().optional(),
     startedAt: z.string().datetime().nullable().optional(),
     completedAt: z.string().datetime().nullable().optional(),
-    progressPercentage: z.number().min(0).max(100),
+    progressPercentage: z.number().transform((val) => Math.min(100, Math.max(0, val))),
     isActive: z.boolean(),
     // Action state properties
     canRetry: z.boolean().optional().default(false),
