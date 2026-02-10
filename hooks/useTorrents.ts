@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 import { analyzeTorrentFile, getTorrentAnalysis, createJob, getTorrentErrorMessage } from '@/lib/api/torrents'
 import { useTorrentStore } from '@/stores/torrentStore'
 import type { TorrentInfo, AnalyzeResponse, JobCreationResult } from '@/types/torrents'
-import { AxiosError } from 'axios'
+import { extractApiError } from '@/lib/api/errors'
 import { jobsKeys } from './useJobs'
 
 // ============================================
@@ -23,25 +23,12 @@ export const torrentKeys = {
 // Error Handler
 // ============================================
 
-interface ApiError {
-    code?: string
-    message?: string
-}
-
 function handleTorrentError(error: unknown): string {
-    if (error instanceof AxiosError && error.response?.data) {
-        const data = error.response.data as ApiError
-        if (data.code) {
-            return getTorrentErrorMessage(data.code)
-        }
-        if (data.message) {
-            return data.message
-        }
+    const extracted = extractApiError(error)
+    if (extracted.code) {
+        return getTorrentErrorMessage(extracted.code)
     }
-    if (error instanceof Error) {
-        return error.message
-    }
-    return 'An unexpected error occurred'
+    return extracted.message
 }
 
 // ============================================

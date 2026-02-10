@@ -77,7 +77,7 @@ export async function configureS3(config: ConfigureS3Request): Promise<S3Configu
     const validatedConfig = ConfigureS3RequestSchema.parse(config)
 
     const response = await apiClient.post<S3ConfigureResult>(
-        '/storage/configure-s3',
+        '/storage/s3/configure',
         validatedConfig
     )
     return response.data

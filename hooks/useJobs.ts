@@ -3,7 +3,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { AxiosError } from 'axios'
 import {
     getJobs,
     getJob,
@@ -15,6 +14,7 @@ import {
 import { useJobsStore } from '@/stores/jobsStore'
 import type { JobsQueryParams } from '@/types/jobs'
 import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema, getJobsErrorMessage } from '@/types/jobs'
+import { extractApiError } from '@/lib/api/errors'
 import { z } from 'zod'
 
 // ============================================
@@ -189,28 +189,12 @@ export function usePrefetchNextPage() {
 // Error Handler
 // ============================================
 
-interface ApiErrorResponse {
-    isSuccess: boolean
-    error?: {
-        code: string
-        message: string
-    }
-}
-
 function handleJobActionError(error: unknown): string {
-    if (error instanceof AxiosError && error.response?.data) {
-        const data = error.response.data as ApiErrorResponse
-        if (data.error?.code) {
-            return getJobsErrorMessage(data.error.code, data.error.message)
-        }
-        if (data.error?.message) {
-            return data.error.message
-        }
+    const extracted = extractApiError(error)
+    if (extracted.code) {
+        return getJobsErrorMessage(extracted.code, extracted.message)
     }
-    if (error instanceof Error) {
-        return error.message
-    }
-    return 'An unexpected error occurred'
+    return extracted.message
 }
 
 // ============================================

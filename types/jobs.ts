@@ -241,21 +241,21 @@ export const statusLabels: Record<JobStatus, string> = {
 // ============================================
 
 export const jobsErrorMessages: Record<string, string> = {
-    // General errors
-    'NOT_FOUND': 'Job not found.',
-    'JOB_NOT_FOUND': 'Job not found.',
-    'UNAUTHORIZED': 'You are not authorized to perform this action.',
-    'FETCH_ERROR': 'Failed to fetch jobs. Please try again.',
-    
+    // General errors (PascalCase - matching backend v2 format)
+    'NotFound': 'Job not found.',
+    'JobNotFound': 'Job not found.',
+    'Unauthorized': 'You are not authorized to perform this action.',
+    'FetchError': 'Failed to fetch jobs. Please try again.',
+
     // Retry errors
-    'JOB_COMPLETED': 'Cannot retry a completed job.',
-    'JOB_CANCELLED': 'Cannot retry a cancelled job.',
-    'JOB_ACTIVE': 'Job is currently active. Wait for it to complete or fail before retrying.',
-    'STORAGE_INACTIVE': 'The storage profile for this job is no longer active.',
-    
+    'JobCompleted': 'Cannot retry a completed job.',
+    'JobCancelled': 'Cannot retry a cancelled job.',
+    'JobActive': 'Job is currently active. Wait for it to complete or fail before retrying.',
+    'StorageInactive': 'The storage profile for this job is no longer active.',
+
     // Cancel errors
-    'JOB_ALREADY_CANCELLED': 'This job has already been cancelled.',
-    'JOB_NOT_CANCELLABLE': 'This job cannot be cancelled in its current state.',
+    'JobAlreadyCancelled': 'This job has already been cancelled.',
+    'JobNotCancellable': 'This job cannot be cancelled in its current state.',
 }
 
 export function getJobsErrorMessage(code: string, fallback?: string): string {

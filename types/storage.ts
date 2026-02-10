@@ -42,12 +42,14 @@ export const ConfigureGoogleDriveRequestSchema = z.object({
     profileName: profileNameSchema,
     clientId: z.string()
         .min(1, 'Client ID is required')
+        .max(500, 'Client ID is too long')
         .regex(
             /\.apps\.googleusercontent\.com$/,
             'Client ID must end with .apps.googleusercontent.com'
         ),
     clientSecret: z.string()
-        .min(1, 'Client Secret is required'),
+        .min(1, 'Client Secret is required')
+        .max(500, 'Client Secret is too long'),
     redirectUri: z.string()
         .url('Redirect URI must be a valid URL'),
     setAsDefault: z.boolean(),
@@ -122,29 +124,32 @@ export interface StorageProfilesListProps {
 // ============================================
 
 export const storageErrorMessages: Record<string, string> = {
-    'AUTH_URL_ERROR': 'Failed to generate authorization URL. Please try again.',
-    'INVALID_STATE': 'The authorization state is invalid or expired. Please try again.',
-    'USER_MISMATCH': 'Authentication error. Please log in again.',
-    'TOKEN_EXCHANGE_FAILED': 'Failed to exchange authorization code for tokens. Please verify your credentials match those in Google Cloud Console.',
-    'OAUTH_CALLBACK_ERROR': 'An error occurred during connection. Please try again later.',
-    'PROFILE_NOT_FOUND': 'Storage profile not found.',
-    'REDIS_ERROR': 'Service temporarily unavailable. Please try again later.',
+    // Backend error codes (PascalCase - matching backend v2 format)
+    'AuthUrlError': 'Failed to generate authorization URL. Please try again.',
+    'InvalidState': 'The authorization state is invalid or expired. Please try again.',
+    'UserMismatch': 'Authentication error. Please log in again.',
+    'TokenExchangeFailed': 'Failed to exchange authorization code for tokens. Please verify your credentials match those in Google Cloud Console.',
+    'OauthCallbackError': 'An error occurred during connection. Please try again later.',
+    'ProfileNotFound': 'Storage profile not found.',
+    'RedisError': 'Service temporarily unavailable. Please try again later.',
+    'InvalidProfileName': 'Profile name contains invalid characters. Use only letters, numbers, spaces, hyphens, and underscores.',
+    'ProfileNameTooShort': 'Profile name must be at least 3 characters.',
+    'ProfileNameTooLong': 'Profile name must be at most 50 characters.',
+    'DuplicateEmail': 'This Google account is already connected. Please use a different account.',
+    'InvalidClientId': 'Invalid Google OAuth Client ID. Ensure it ends with .apps.googleusercontent.com',
+    'InvalidClientSecret': 'Client Secret is required.',
+    'InvalidRedirectUri': 'Invalid redirect URI. Please verify the URL is correct.',
+    // S3 errors
+    'InvalidS3Config': 'One or more S3 configuration fields are invalid.',
+    'InvalidS3Endpoint': 'Invalid S3 endpoint URL.',
+    'InvalidS3Credentials': 'Invalid S3 access key or secret key.',
+    'InvalidS3Bucket': 'Invalid S3 bucket name or bucket does not exist.',
+    'S3ConnectionFailed': 'Failed to connect to S3. Please verify your credentials and endpoint.',
+    'S3AccessDenied': 'Access denied. Please check your S3 permissions.',
+    // Client-side errors (SCREAMING_SNAKE_CASE - thrown locally, not from backend)
     'POPUP_BLOCKED': 'Popup blocked. Please allow popups for this site.',
     'AUTHORIZATION_CANCELLED': 'Authorization was cancelled.',
     'AUTHORIZATION_TIMEOUT': 'Authorization timed out. Please try again.',
-    'INVALID_PROFILE_NAME': 'Profile name contains invalid characters. Use only letters, numbers, spaces, hyphens, and underscores.',
-    'PROFILE_NAME_TOO_SHORT': 'Profile name must be at least 3 characters.',
-    'PROFILE_NAME_TOO_LONG': 'Profile name must be at most 50 characters.',
-    'DUPLICATE_EMAIL': 'This Google account is already connected. Please use a different account.',
-    'INVALID_CLIENT_ID': 'Invalid Google OAuth Client ID. Ensure it ends with .apps.googleusercontent.com',
-    'INVALID_CLIENT_SECRET': 'Client Secret is required.',
-    'INVALID_REDIRECT_URI': 'Invalid redirect URI. Please verify the URL is correct.',
-    // S3 errors
-    'INVALID_S3_ENDPOINT': 'Invalid S3 endpoint URL.',
-    'INVALID_S3_CREDENTIALS': 'Invalid S3 access key or secret key.',
-    'INVALID_S3_BUCKET': 'Invalid S3 bucket name or bucket does not exist.',
-    'S3_CONNECTION_FAILED': 'Failed to connect to S3. Please verify your credentials and endpoint.',
-    'S3_ACCESS_DENIED': 'Access denied. Please check your S3 permissions.',
 }
 
 export function getStorageErrorMessage(code: string, fallback?: string): string {

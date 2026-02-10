@@ -120,12 +120,13 @@ export type ApiErrorResponse = z.infer<typeof apiErrorResponseSchema>
 // ============================================
 
 export const torrentErrorMessages: Record<string, string> = {
-    INVALID_TORRENT_FILE: 'The uploaded file is not a valid torrent file',
-    VALIDATION_ERROR: 'Request validation failed',
-    TORRENT_FILE_NOT_FOUND: 'Torrent file not found',
-    STORAGE_PROFILE_NOT_FOUND: 'Storage profile not found',
-    UNAUTHORIZED: 'Please sign in to continue',
-    FORBIDDEN: 'You do not have permission to perform this action',
+    // PascalCase - matching backend v2 format
+    InvalidTorrent: 'The uploaded file is not a valid torrent file',
+    Invalid: 'Request validation failed',
+    TorrentNotFound: 'Torrent file not found',
+    ProfileNotFound: 'Storage profile not found',
+    Unauthorized: 'Please sign in to continue',
+    AccessDenied: 'You do not have permission to perform this action',
 }
 
 export function getTorrentErrorMessage(code: string): string {

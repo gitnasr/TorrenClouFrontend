@@ -13,6 +13,7 @@ import {
 import { getStorageErrorMessage } from '@/types/storage'
 import type { StorageProfile, ConfigureGoogleDriveRequest, ConfigureS3Request } from '@/types/storage'
 import { useStorageProfilesStore } from '@/stores/storageProfilesStore'
+import { extractApiError } from '@/lib/api/errors'
 import { toast } from 'sonner'
 
 // ============================================
@@ -92,9 +93,12 @@ export function useConnectGoogleDrive() {
             toast.success('Google Drive connected successfully!')
         },
 
-        onError: (error: Error) => {
+        onError: (error: unknown) => {
             setConnecting(false)
-            const errorMessage = getStorageErrorMessage(error.message, error.message)
+            const extracted = extractApiError(error)
+            const errorMessage = extracted.code
+                ? getStorageErrorMessage(extracted.code, extracted.message)
+                : extracted.message
             setConnectionError(errorMessage)
             toast.error('Connection Failed', { description: errorMessage })
         },
@@ -132,9 +136,12 @@ export function useConfigureS3() {
             toast.success('S3 storage configured successfully!')
         },
 
-        onError: (error: Error) => {
+        onError: (error: unknown) => {
             setConnecting(false)
-            const errorMessage = getStorageErrorMessage(error.message, error.message)
+            const extracted = extractApiError(error)
+            const errorMessage = extracted.code
+                ? getStorageErrorMessage(extracted.code, extracted.message)
+                : extracted.message
             setConnectionError(errorMessage)
             toast.error('Configuration Failed', { description: errorMessage })
         },
