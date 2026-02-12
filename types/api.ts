@@ -72,8 +72,11 @@ export interface StorageProfile {
   id: number
   profileName: string
   providerType: StorageProviderType
+  email: string | null
   isDefault: boolean
   isActive: boolean
+  needsReauth: boolean
+  isConfigured: boolean
   createdAt: string
 }
 

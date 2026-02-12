@@ -7,11 +7,14 @@ import {
     getStorageProfile,
     setDefaultStorageProfile,
     disconnectStorageProfile,
-    connectGoogleDriveWithPopup,
+    saveGoogleDriveCredentials,
+    authenticateGoogleDrive,
+    reauthenticateGoogleDrive,
+    openGoogleDriveAuthPopup,
     configureS3,
 } from '@/lib/api/storage'
 import { getStorageErrorMessage } from '@/types/storage'
-import type { StorageProfile, ConfigureGoogleDriveRequest, ConfigureS3Request } from '@/types/storage'
+import type { StorageProfile, SaveGoogleDriveCredentialsRequest, ConfigureS3Request } from '@/types/storage'
 import { useStorageProfilesStore } from '@/stores/storageProfilesStore'
 import { extractApiError } from '@/lib/api/errors'
 import { toast } from 'sonner'
@@ -64,9 +67,51 @@ export function useStorageProfile(profileId: number) {
 // ============================================
 
 /**
- * Hook to connect Google Drive via OAuth popup with user-provided credentials
+ * Hook to save Google Drive OAuth credentials (Step 1 of two-step auth)
+ * Creates a profile with isConfigured = false
  */
-export function useConnectGoogleDrive() {
+export function useSaveGoogleDriveCredentials() {
+    const {
+        setConnecting,
+        setConnectionError,
+        setPendingProfileId,
+        setCurrentStep,
+    } = useStorageProfilesStore()
+
+    return useMutation({
+        mutationFn: (data: SaveGoogleDriveCredentialsRequest) => saveGoogleDriveCredentials(data),
+
+        onMutate: () => {
+            setConnecting(true)
+            setConnectionError(null)
+        },
+
+        onSuccess: (result) => {
+            setConnecting(false)
+            setPendingProfileId(result.profileId)
+            setCurrentStep(2)
+            toast.success('Credentials saved', {
+                description: `Profile "${result.profileName}" created. Now authenticate with Google.`,
+            })
+        },
+
+        onError: (error: unknown) => {
+            setConnecting(false)
+            const extracted = extractApiError(error)
+            const errorMessage = extracted.code
+                ? getStorageErrorMessage(extracted.code, extracted.message)
+                : extracted.message
+            setConnectionError(errorMessage)
+            toast.error('Failed to save credentials', { description: errorMessage })
+        },
+    })
+}
+
+/**
+ * Hook to authenticate a Google Drive profile (Step 2 of two-step auth)
+ * Opens a popup for Google OAuth consent flow
+ */
+export function useAuthenticateGoogleDrive() {
     const queryClient = useQueryClient()
     const {
         setConnecting,
@@ -75,7 +120,10 @@ export function useConnectGoogleDrive() {
     } = useStorageProfilesStore()
 
     return useMutation({
-        mutationFn: (config: ConfigureGoogleDriveRequest) => connectGoogleDriveWithPopup(config),
+        mutationFn: async (profileId: number) => {
+            const { authorizationUrl } = await authenticateGoogleDrive(profileId)
+            return openGoogleDriveAuthPopup(authorizationUrl)
+        },
 
         onMutate: () => {
             setConnecting(true)
@@ -84,11 +132,8 @@ export function useConnectGoogleDrive() {
 
         onSuccess: (profileId) => {
             setConnecting(false)
-            // Invalidate and refetch profiles list
             queryClient.invalidateQueries({ queryKey: storageProfileKeys.list() })
-            // Prefetch the new profile
             queryClient.invalidateQueries({ queryKey: storageProfileKeys.detail(profileId) })
-            // Close modal
             closeConnectModal()
             toast.success('Google Drive connected successfully!')
         },
@@ -100,7 +145,36 @@ export function useConnectGoogleDrive() {
                 ? getStorageErrorMessage(extracted.code, extracted.message)
                 : extracted.message
             setConnectionError(errorMessage)
-            toast.error('Connection Failed', { description: errorMessage })
+            toast.error('Authentication Failed', { description: errorMessage })
+        },
+    })
+}
+
+/**
+ * Hook to re-authenticate a Google Drive profile when refresh token has expired
+ * Opens a popup for Google OAuth consent flow — no need to re-enter credentials
+ */
+export function useReauthenticateGoogleDrive() {
+    const queryClient = useQueryClient()
+
+    return useMutation({
+        mutationFn: async (profileId: number) => {
+            const { authorizationUrl } = await reauthenticateGoogleDrive(profileId)
+            return openGoogleDriveAuthPopup(authorizationUrl)
+        },
+
+        onSuccess: (profileId) => {
+            queryClient.invalidateQueries({ queryKey: storageProfileKeys.list() })
+            queryClient.invalidateQueries({ queryKey: storageProfileKeys.detail(profileId) })
+            toast.success('Google Drive reconnected successfully!')
+        },
+
+        onError: (error: unknown) => {
+            const extracted = extractApiError(error)
+            const errorMessage = extracted.code
+                ? getStorageErrorMessage(extracted.code, extracted.message)
+                : extracted.message
+            toast.error('Re-authentication Failed', { description: errorMessage })
         },
     })
 }

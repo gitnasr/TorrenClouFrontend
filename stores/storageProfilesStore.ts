@@ -19,6 +19,12 @@ interface StorageProfilesUIState {
     setConnecting: (isConnecting: boolean) => void
     setConnectionError: (error: string | null) => void
 
+    // Two-step auth flow state
+    pendingProfileId: number | null
+    setPendingProfileId: (id: number | null) => void
+    currentStep: 1 | 2
+    setCurrentStep: (step: 1 | 2) => void
+
     // Selected profile for details view
     selectedProfileId: number | null
     setSelectedProfileId: (id: number | null) => void
@@ -37,6 +43,8 @@ export const useStorageProfilesStore = create<StorageProfilesUIState>()(
                 isConnectModalOpen: false,
                 profileName: '',
                 connectionError: null,
+                pendingProfileId: null,
+                currentStep: 1,
             }),
 
             // Profile name state
@@ -50,6 +58,12 @@ export const useStorageProfilesStore = create<StorageProfilesUIState>()(
             setConnecting: (isConnecting) => set({ isConnecting, connectionError: null }),
             setConnectionError: (error) => set({ connectionError: error, isConnecting: false }),
 
+            // Two-step auth flow state
+            pendingProfileId: null,
+            setPendingProfileId: (id: number | null) => set({ pendingProfileId: id }),
+            currentStep: 1,
+            setCurrentStep: (step: 1 | 2) => set({ currentStep: step }),
+
             // Selected profile
             selectedProfileId: null,
             setSelectedProfileId: (id: number | null) => set({ selectedProfileId: id }),
@@ -60,6 +74,8 @@ export const useStorageProfilesStore = create<StorageProfilesUIState>()(
                 profileName: '',
                 isConnecting: false,
                 connectionError: null,
+                pendingProfileId: null,
+                currentStep: 1,
                 selectedProfileId: null,
             }),
         }),
@@ -72,4 +88,6 @@ export const selectIsConnectModalOpen = (state: StorageProfilesUIState) => state
 export const selectProfileName = (state: StorageProfilesUIState) => state.profileName
 export const selectIsConnecting = (state: StorageProfilesUIState) => state.isConnecting
 export const selectConnectionError = (state: StorageProfilesUIState) => state.connectionError
+export const selectPendingProfileId = (state: StorageProfilesUIState) => state.pendingProfileId
+export const selectCurrentStep = (state: StorageProfilesUIState) => state.currentStep
 export const selectSelectedProfileId = (state: StorageProfilesUIState) => state.selectedProfileId

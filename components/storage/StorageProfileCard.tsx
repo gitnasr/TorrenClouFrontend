@@ -1,13 +1,12 @@
 'use client'
 
-import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Cloud, Settings, Star, Loader2, Mail } from 'lucide-react'
+import { Cloud, Settings, Star, Loader2, Mail, AlertTriangle, ExternalLink } from 'lucide-react'
 import { StorageProviderType } from '@/types/enums'
 import type { StorageProfileCardProps } from '@/types/storage'
-import { useSetDefaultProfile } from '@/hooks/useStorageProfiles'
+import { useSetDefaultProfile, useAuthenticateGoogleDrive, useReauthenticateGoogleDrive } from '@/hooks/useStorageProfiles'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -36,11 +35,44 @@ const providerConfig: Record<StorageProviderType, { icon: React.ReactNode; color
 
 export function StorageProfileCard({ profile, className }: StorageProfileCardProps) {
     const setDefaultMutation = useSetDefaultProfile()
+    const authenticateMutation = useAuthenticateGoogleDrive()
+    const reauthenticateMutation = useReauthenticateGoogleDrive()
     const config = providerConfig[profile.providerType] || providerConfig[StorageProviderType.GoogleDrive]
 
     const handleSetDefault = () => {
         if (profile.isDefault) return
         setDefaultMutation.mutate(profile.id)
+    }
+
+    const handleCompleteSetup = () => {
+        authenticateMutation.mutate(profile.id)
+    }
+
+    const handleReauthenticate = () => {
+        reauthenticateMutation.mutate(profile.id)
+    }
+
+    const isGoogleDrive = profile.providerType === StorageProviderType.GoogleDrive
+    const needsSetup = isGoogleDrive && !profile.isConfigured && !profile.needsReauth
+    const needsReauth = isGoogleDrive && profile.needsReauth
+    const isActionPending = authenticateMutation.isPending || reauthenticateMutation.isPending
+
+    const getBadge = () => {
+        if (needsSetup) {
+            return <Badge variant="outline" className="border-warning text-warning">Setup Incomplete</Badge>
+        }
+        if (needsReauth) {
+            return <Badge variant="outline" className="border-danger text-danger">Reconnect Required</Badge>
+        }
+        if (profile.isDefault) {
+            return (
+                <Badge variant="default">
+                    <Star className="mr-1 h-3 w-3" />
+                    Default
+                </Badge>
+            )
+        }
+        return <Badge variant="outline">Active</Badge>
     }
 
     return (
@@ -65,26 +97,64 @@ export function StorageProfileCard({ profile, className }: StorageProfileCardPro
                             )}
                         </div>
                     </div>
-                    <Badge variant={profile.isDefault ? 'default' : 'outline'}>
-                        {profile.isDefault ? (
-                            <>
-                                <Star className="mr-1 h-3 w-3" />
-                                Default
-                            </>
-                        ) : (
-                            'Active'
-                        )}
-                    </Badge>
+                    {getBadge()}
                 </div>
 
+                {/* Reauth Warning Banner */}
+                {needsReauth && (
+                    <div className="mt-3 flex gap-2 rounded-md border border-danger/30 bg-danger/10 p-3 text-sm text-danger">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>Connection expired. Reconnect to continue syncing.</span>
+                    </div>
+                )}
+
+                {/* Incomplete Setup Banner */}
+                {needsSetup && (
+                    <div className="mt-3 flex gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
+                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                        <span>OAuth setup not completed. Authenticate to start using this profile.</span>
+                    </div>
+                )}
+
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    <Button variant="ghost" size="sm" asChild>
-                        <Link href={`/storage/${profile.id}`}>
-                            <Settings className="mr-2 h-4 w-4" />
-                            Manage
-                        </Link>
-                    </Button>
-                    {!profile.isDefault && (
+                    {needsSetup ? (
+                        <Button
+                            variant="default"
+                            size="sm"
+                            onClick={handleCompleteSetup}
+                            disabled={isActionPending}
+                        >
+                            {authenticateMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                            )}
+                            Complete Setup
+                        </Button>
+                    ) : needsReauth ? (
+                        <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-danger hover:bg-danger/90 text-danger-foreground"
+                            onClick={handleReauthenticate}
+                            disabled={isActionPending}
+                        >
+                            {reauthenticateMutation.isPending ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <ExternalLink className="mr-2 h-4 w-4" />
+                            )}
+                            Reconnect
+                        </Button>
+                    ) : (
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href={`/storage/${profile.id}`}>
+                                <Settings className="mr-2 h-4 w-4" />
+                                Manage
+                            </Link>
+                        </Button>
+                    )}
+                    {!profile.isDefault && !needsSetup && !needsReauth && (
                         <Button
                             variant="ghost"
                             size="sm"

@@ -23,6 +23,8 @@ export const StorageProfileSchema = z.object({
     email: z.string().nullable(),
     isDefault: z.boolean(),
     isActive: z.boolean(),
+    needsReauth: z.boolean(),
+    isConfigured: z.boolean(),
     createdAt: z.string(),
 })
 
@@ -30,16 +32,12 @@ export const StorageProfileDetailSchema = StorageProfileSchema.extend({
     updatedAt: z.string().nullable(),
 })
 
-export const GoogleDriveConnectResponseSchema = z.object({
-    authorizationUrl: z.string().url(),
-})
-
 // ============================================
-// Google Drive Configuration Schema (User OAuth Credentials)
+// Google Drive Two-Step Auth Schemas
 // ============================================
 
-export const ConfigureGoogleDriveRequestSchema = z.object({
-    profileName: profileNameSchema,
+// Step 1: Save credentials request
+export const SaveGoogleDriveCredentialsRequestSchema = z.object({
     clientId: z.string()
         .min(1, 'Client ID is required')
         .max(500, 'Client ID is too long')
@@ -52,11 +50,21 @@ export const ConfigureGoogleDriveRequestSchema = z.object({
         .max(500, 'Client Secret is too long'),
     redirectUri: z.string()
         .url('Redirect URI must be a valid URL'),
-    setAsDefault: z.boolean(),
+    profileName: z.string()
+        .max(255, 'Profile name must be at most 255 characters')
+        .optional(),
+    setAsDefault: z.boolean().optional().default(false),
 })
 
-export const GoogleDriveCallbackResponseSchema = z.object({
-    value: z.number(),
+// Step 1: Save credentials response
+export const SaveGoogleDriveCredentialsResponseSchema = z.object({
+    profileId: z.number(),
+    profileName: z.string(),
+})
+
+// Step 2: Authenticate / Reauthenticate response
+export const GoogleDriveAuthResponseSchema = z.object({
+    authorizationUrl: z.string().url(),
 })
 
 // ============================================
@@ -98,10 +106,10 @@ export const StorageProfilesArraySchema = z.array(StorageProfileSchema)
 export type ProfileName = z.infer<typeof profileNameSchema>
 export type StorageProfile = z.infer<typeof StorageProfileSchema>
 export type StorageProfileDetail = z.infer<typeof StorageProfileDetailSchema>
-export type GoogleDriveConnectResponse = z.infer<typeof GoogleDriveConnectResponseSchema>
-export type GoogleDriveCallbackResponse = z.infer<typeof GoogleDriveCallbackResponseSchema>
+export type SaveGoogleDriveCredentialsRequest = z.infer<typeof SaveGoogleDriveCredentialsRequestSchema>
+export type SaveGoogleDriveCredentialsResponse = z.infer<typeof SaveGoogleDriveCredentialsResponseSchema>
+export type GoogleDriveAuthResponse = z.infer<typeof GoogleDriveAuthResponseSchema>
 export type StorageApiError = z.infer<typeof StorageApiErrorSchema>
-export type ConfigureGoogleDriveRequest = z.infer<typeof ConfigureGoogleDriveRequestSchema>
 export type ConfigureS3Request = z.infer<typeof ConfigureS3RequestSchema>
 
 // ============================================
@@ -136,6 +144,8 @@ export const storageErrorMessages: Record<string, string> = {
     'ProfileNameTooShort': 'Profile name must be at least 3 characters.',
     'ProfileNameTooLong': 'Profile name must be at most 50 characters.',
     'DuplicateEmail': 'This Google account is already connected. Please use a different account.',
+    'ProfileNotConfigured': 'This profile has not been configured with OAuth credentials yet.',
+    'RefreshTokenExpired': 'Your Google Drive connection has expired. Please reconnect to continue.',
     'InvalidClientId': 'Invalid Google OAuth Client ID. Ensure it ends with .apps.googleusercontent.com',
     'InvalidClientSecret': 'Client Secret is required.',
     'InvalidRedirectUri': 'Invalid redirect URI. Please verify the URL is correct.',
