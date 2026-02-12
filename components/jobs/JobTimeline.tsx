@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Loader2, User, Settings, RefreshCw, Zap, CheckCircle, XCircle, Clock, Download, Upload } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { AlertCircle, Loader2, User, Settings, RefreshCw, Zap, CheckCircle, XCircle, Clock, Download, Upload, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useJobTimeline } from '@/hooks/useJobs'
 import { JobStatus } from '@/types/enums'
 import { StatusChangeSource } from '@/types/jobs'
@@ -25,7 +27,7 @@ const statusColors: Record<JobStatus, { bg: string; text: string; border: string
     [JobStatus.UPLOAD_RETRY]: { bg: 'bg-orange-500/20', text: 'text-orange-600', border: 'border-orange-500' },
     [JobStatus.COMPLETED]: { bg: 'bg-green-500/20', text: 'text-green-600', border: 'border-green-500' },
     [JobStatus.FAILED]: { bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-500' },
-    [JobStatus.CANCELLED]: { bg: 'bg-gray-500/20', text: 'text-gray-600', border: 'border-gray-500' },
+    [JobStatus.CANCELLED]: { bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-500' },
     [JobStatus.TORRENT_FAILED]: { bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-500' },
     [JobStatus.UPLOAD_FAILED]: { bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-500' },
     [JobStatus.GOOGLE_DRIVE_FAILED]: { bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-500' },
@@ -106,8 +108,11 @@ interface JobTimelineProps {
     jobId: number
 }
 
+const TIMELINE_PAGE_SIZE = 10
+
 export function JobTimeline({ jobId }: JobTimelineProps) {
-    const { data: timeline, isLoading, error } = useJobTimeline(jobId)
+    const [pageNumber, setPageNumber] = useState(1)
+    const { data, isLoading, error } = useJobTimeline(jobId, pageNumber, TIMELINE_PAGE_SIZE)
 
     if (isLoading) {
         return (
@@ -124,7 +129,7 @@ export function JobTimeline({ jobId }: JobTimelineProps) {
         )
     }
 
-    if (error || !timeline || timeline.length === 0) {
+    if (error || !data || data.items.length === 0) {
         return (
             <Card>
                 <CardHeader>
@@ -138,6 +143,8 @@ export function JobTimeline({ jobId }: JobTimelineProps) {
             </Card>
         )
     }
+
+    const { items: timeline, hasPreviousPage, hasNextPage, totalPages } = data
 
     return (
         <Card>
@@ -248,6 +255,33 @@ export function JobTimeline({ jobId }: JobTimelineProps) {
                         )
                     })}
                 </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPageNumber((p) => Math.max(1, p - 1))}
+                            disabled={!hasPreviousPage}
+                        >
+                            <ChevronLeft className="h-4 w-4 mr-1" />
+                            Prev
+                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                            Page {pageNumber} of {totalPages}
+                        </span>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setPageNumber((p) => p + 1)}
+                            disabled={!hasNextPage}
+                        >
+                            Next
+                            <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                    </div>
+                )}
             </CardContent>
         </Card>
     )

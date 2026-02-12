@@ -166,6 +166,16 @@ export const jobTimelineEntrySchema = z.object({
     durationFromPrevious: z.string().nullable(), // ISO 8601 duration format
 })
 
+export const paginatedJobTimelineSchema = z.object({
+    items: z.array(jobTimelineEntrySchema),
+    totalCount: z.number().int().nonnegative(),
+    pageNumber: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    totalPages: z.number().int().nonnegative(),
+    hasPreviousPage: z.boolean(),
+    hasNextPage: z.boolean(),
+})
+
 // ============================================
 // Inferred Types from Schemas
 // ============================================
@@ -174,12 +184,18 @@ export type Job = z.infer<typeof jobSchema>
 export type PaginatedJobs = z.infer<typeof paginatedJobsSchema>
 export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 export type JobTimelineEntry = z.infer<typeof jobTimelineEntrySchema>
+export type PaginatedJobTimeline = z.infer<typeof paginatedJobTimelineSchema>
 
 // Manual type for query params (avoiding Zod default inference issues)
 export interface JobsQueryParams {
     pageNumber?: number
     pageSize?: number
     status?: 'QUEUED' | 'DOWNLOADING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'TORRENT_DOWNLOAD_RETRY' | 'UPLOAD_RETRY' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'TORRENT_FAILED' | 'UPLOAD_FAILED' | 'GOOGLE_DRIVE_FAILED' | null
+}
+
+export interface JobTimelineQueryParams {
+    pageNumber?: number
+    pageSize?: number
 }
 
 // ============================================

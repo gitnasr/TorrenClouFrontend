@@ -12,10 +12,9 @@ import {
     cancelJob,
 } from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import type { JobsQueryParams } from '@/types/jobs'
-import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema, getJobsErrorMessage } from '@/types/jobs'
+import type { JobsQueryParams, JobTimelineQueryParams } from '@/types/jobs'
+import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, paginatedJobTimelineSchema, getJobsErrorMessage } from '@/types/jobs'
 import { extractApiError } from '@/lib/api/errors'
-import { z } from 'zod'
 
 // ============================================
 // Query Keys
@@ -29,7 +28,7 @@ export const jobsKeys = {
     detail: (id: number) => [...jobsKeys.details(), id] as const,
     statistics: () => [...jobsKeys.all, 'statistics'] as const,
     timelines: () => [...jobsKeys.all, 'timeline'] as const,
-    timeline: (id: number) => [...jobsKeys.timelines(), id] as const,
+    timeline: (id: number, params?: JobTimelineQueryParams) => [...jobsKeys.timelines(), id, params] as const,
 }
 
 // ============================================
@@ -127,24 +126,24 @@ export function useJobStatistics() {
 }
 
 /**
- * Hook to fetch job timeline
+ * Hook to fetch job timeline with pagination
  * Enhanced with refetch on focus, reconnect, and polling for active jobs
  */
-export function useJobTimeline(jobId: number | null) {
+export function useJobTimeline(jobId: number | null, pageNumber: number = 1, pageSize: number = 10) {
     const { status } = useSession()
     
     // Get job data to check if it's active
     const { data: jobData } = useJob(jobId)
 
     return useQuery({
-        queryKey: jobsKeys.timeline(jobId ?? 0),
+        queryKey: jobsKeys.timeline(jobId ?? 0, { pageNumber, pageSize }),
         queryFn: async () => {
             if (!jobId) {
                 throw new Error('Invalid job ID')
             }
-            const data = await getJobTimeline(jobId)
+            const data = await getJobTimeline(jobId, { pageNumber, pageSize })
             // Validate with Zod
-            return z.array(jobTimelineEntrySchema).parse(data)
+            return paginatedJobTimelineSchema.parse(data)
         },
         enabled: status === 'authenticated' && !!jobId,
         staleTime: 5 * 1000, // 5 seconds - timeline updates when job status changes

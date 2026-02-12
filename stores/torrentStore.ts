@@ -1,24 +1,20 @@
 // Zustand store for Torrent workflow state
 import { create } from 'zustand'
-import { devtools, persist } from 'zustand/middleware'
-import type { TorrentInfo, AnalyzeResponse } from '@/types/torrents'
+import { devtools } from 'zustand/middleware'
+import type { TorrentAnalysisResponse } from '@/types/torrents'
 
 interface TorrentStore {
     // Analysis state
-    analysisResult: TorrentInfo | null
+    analysisResult: TorrentAnalysisResponse | null
     torrentFile: File | null
-
-    // Analyze result state
-    analyzeResult: AnalyzeResponse | null
 
     // Selection state
     selectedFilePaths: string[]
     selectedStorageProfileId: number | null
 
     // Actions
-    setAnalysisResult: (result: TorrentInfo) => void
+    setAnalysisResult: (result: TorrentAnalysisResponse) => void
     setTorrentFile: (file: File | null) => void
-    setAnalyzeResult: (result: AnalyzeResponse | null) => void
     setSelectedFilePaths: (paths: string[]) => void
     toggleFileSelection: (path: string) => void
     selectAllFiles: () => void
@@ -34,7 +30,6 @@ export const useTorrentStore = create<TorrentStore>()(
             // Initial state
             analysisResult: null,
             torrentFile: null,
-            analyzeResult: null,
             selectedFilePaths: [],
             selectedStorageProfileId: null,
 
@@ -45,8 +40,6 @@ export const useTorrentStore = create<TorrentStore>()(
                         analysisResult: result,
                         // Auto-select all files when analysis completes
                         selectedFilePaths: result.files.map((f) => f.path),
-                        // Clear any previous analyze result when new analysis is done
-                        analyzeResult: null,
                     },
                     false,
                     'setAnalysisResult'
@@ -54,9 +47,6 @@ export const useTorrentStore = create<TorrentStore>()(
 
             setTorrentFile: (file) =>
                 set({ torrentFile: file }, false, 'setTorrentFile'),
-
-            setAnalyzeResult: (result) =>
-                set({ analyzeResult: result }, false, 'setAnalyzeResult'),
 
             setSelectedFilePaths: (paths) =>
                 set({ selectedFilePaths: paths }, false, 'setSelectedFilePaths'),
@@ -67,8 +57,6 @@ export const useTorrentStore = create<TorrentStore>()(
                         selectedFilePaths: state.selectedFilePaths.includes(path)
                             ? state.selectedFilePaths.filter((p) => p !== path)
                             : [...state.selectedFilePaths, path],
-                        // Clear analyze result when selection changes
-                        analyzeResult: null,
                     }),
                     false,
                     'toggleFileSelection'
@@ -79,7 +67,6 @@ export const useTorrentStore = create<TorrentStore>()(
                     (state) => ({
                         selectedFilePaths:
                             state.analysisResult?.files.map((f) => f.path) ?? [],
-                        analyzeResult: null,
                     }),
                     false,
                     'selectAllFiles'
@@ -87,7 +74,7 @@ export const useTorrentStore = create<TorrentStore>()(
 
             deselectAllFiles: () =>
                 set(
-                    { selectedFilePaths: [], analyzeResult: null },
+                    { selectedFilePaths: [] },
                     false,
                     'deselectAllFiles'
                 ),
@@ -100,7 +87,6 @@ export const useTorrentStore = create<TorrentStore>()(
                     {
                         analysisResult: null,
                         torrentFile: null,
-                        analyzeResult: null,
                         selectedFilePaths: [],
                         selectedStorageProfileId: null,
                     },
@@ -115,7 +101,6 @@ export const useTorrentStore = create<TorrentStore>()(
 // Selectors for optimized re-renders
 export const selectAnalysisResult = (state: TorrentStore) => state.analysisResult
 export const selectTorrentFile = (state: TorrentStore) => state.torrentFile
-export const selectAnalyzeResult = (state: TorrentStore) => state.analyzeResult
 export const selectSelectedFilePaths = (state: TorrentStore) => state.selectedFilePaths
 export const selectSelectedStorageProfileId = (state: TorrentStore) => state.selectedStorageProfileId
 
@@ -126,6 +111,4 @@ export const selectSelectedFilesSize = (state: TorrentStore) => {
         .filter((f) => state.selectedFilePaths.includes(f.path))
         .reduce((acc, f) => acc + f.size, 0)
 }
-
-export const selectHasAnalysis = (state: TorrentStore) => state.analyzeResult !== null
 

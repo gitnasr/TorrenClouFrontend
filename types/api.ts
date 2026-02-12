@@ -43,14 +43,6 @@ export interface TorrentFile {
   size: number
 }
 
-export interface ScrapeAggregationResult {
-  seeders: number
-  leechers: number
-  completed: number
-  trackersSuccess: number
-  trackersTotal: number
-}
-
 export interface TorrentHealthMeasurements {
   seeders: number
   leechers: number
@@ -63,42 +55,13 @@ export interface TorrentHealthMeasurements {
   healthScore: number
 }
 
-export interface TorrentInfo {
-  infoHash: string
-  name: string
-  totalSize: number
-  files: TorrentFile[]
-  trackers: string[]
-  scrapeResult: ScrapeAggregationResult
-}
-
-export interface TorrentAnalysis {
-  infoHash: string
-  name: string
-  totalSize: number
-  files: TorrentFile[]
-  trackers: string[]
-  scrapeResult: ScrapeAggregationResult
-}
-
-// ============================================
-// Analyze Models
-// ============================================
-
-export interface AnalyzeRequest {
-  selectedFilePaths?: string[] | null
-  storageProfileId: number
-  torrentFile: File
-}
-
-export interface AnalyzeResponse {
-  fileName: string
-  sizeInBytes: number
-  infoHash: string
-  torrentHealth: TorrentHealthMeasurements
+export interface TorrentAnalysisResponse {
   torrentFileId: number
-  selectedFiles: string[]
-  message?: string
+  fileName: string
+  infoHash: string
+  totalSizeInBytes: number
+  files: TorrentFile[]
+  torrentHealth: TorrentHealthMeasurements
 }
 
 // ============================================
@@ -157,9 +120,7 @@ export interface UserJob {
 
 export interface JobCreationResult {
   jobId: number
-  storageProfileId?: number
-  hasStorageProfileWarning: boolean
-  storageProfileWarningMessage?: string
+  storageProfileId: number
 }
 
 // ============================================
@@ -169,7 +130,7 @@ export interface JobCreationResult {
 export interface CreateJobRequest {
   torrentFileId: number
   selectedFilePaths?: string[] | null
-  storageProfileId?: number
+  storageProfileId: number
 }
 
 // ============================================

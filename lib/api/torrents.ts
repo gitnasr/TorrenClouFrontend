@@ -1,68 +1,31 @@
 // Torrent API client with Zod validation
 import apiClient from '../axios'
 import {
-    torrentInfoSchema,
-    analyzeResponseSchema,
+    torrentAnalysisResponseSchema,
     jobCreationResultSchema,
-    type TorrentInfo,
-    type AnalyzeResponse,
+    type TorrentAnalysisResponse,
     type JobCreationResult,
 } from '@/types/torrents'
 
 // Re-export types for convenience
-export type { TorrentInfo, AnalyzeResponse, JobCreationResult }
+export type { TorrentAnalysisResponse, JobCreationResult }
 export { getTorrentErrorMessage, torrentErrorMessages } from '@/types/torrents'
 
 /**
  * Analyze a torrent file
- * POST /api/torrents/analyze/file (public endpoint)
+ * POST /api/torrents/analyze
+ * 
+ * Uploads a .torrent file and returns metadata including file list,
+ * health info, and a torrentFileId for use in job creation.
  * 
  * @param file - The .torrent file to analyze
- * @returns Torrent information including files, trackers, and health data
+ * @returns Torrent analysis response with files, health, and torrentFileId
  */
-export async function analyzeTorrentFile(file: File): Promise<TorrentInfo> {
+export async function analyzeTorrentFile(file: File): Promise<TorrentAnalysisResponse> {
     const formData = new FormData()
-    formData.append('file', file)
+    formData.append('TorrentFile', file)
 
-    const response = await apiClient.post<TorrentInfo>(
-        '/torrents/analyze/file',
-        formData,
-        {
-            headers: {
-                'Content-Type': 'multipart/form-data',
-            },
-        }
-    )
-
-    return torrentInfoSchema.parse(response.data)
-}
-
-/**
- * Analyze selected files from a torrent for job creation
- * POST /api/torrents/analyze (authenticated)
- *
- * @param torrentFile - The .torrent file
- * @param selectedFilePaths - Array of file paths to download (null = all files)
- * @param storageProfileId - ID of the storage profile to use for upload
- * @returns Analysis result with torrent metadata and torrentFileId for job creation
- */
-export async function getTorrentAnalysis(
-    torrentFile: File,
-    selectedFilePaths: string[] | null,
-    storageProfileId: number
-): Promise<AnalyzeResponse> {
-    const formData = new FormData()
-    formData.append('torrentFile', torrentFile)
-    formData.append('storageProfileId', storageProfileId.toString())
-
-    // Append each path separately for proper array handling (null = all files)
-    if (selectedFilePaths) {
-        selectedFilePaths.forEach(path => {
-            formData.append('selectedFilePaths', path)
-        })
-    }
-
-    const response = await apiClient.post<AnalyzeResponse>(
+    const response = await apiClient.post<TorrentAnalysisResponse>(
         '/torrents/analyze',
         formData,
         {
@@ -72,22 +35,22 @@ export async function getTorrentAnalysis(
         }
     )
 
-    return analyzeResponseSchema.parse(response.data)
+    return torrentAnalysisResponseSchema.parse(response.data)
 }
 
 /**
- * Create a job directly from a quote
+ * Create a download job from an analyzed torrent
  * POST /api/torrents/create-job (authenticated)
  * 
- * @param torrentFileId - The torrent file ID from quote response
+ * @param torrentFileId - The torrent file ID from analyze response
  * @param selectedFilePaths - Array of file paths to download (null = all files)
- * @param storageProfileId - Optional storage profile ID
+ * @param storageProfileId - Storage profile ID (required)
  * @returns Job creation result with job ID
  */
 export async function createJob(
     torrentFileId: number,
     selectedFilePaths: string[] | null,
-    storageProfileId?: number
+    storageProfileId: number
 ): Promise<JobCreationResult> {
     const response = await apiClient.post<JobCreationResult>(
         '/torrents/create-job',

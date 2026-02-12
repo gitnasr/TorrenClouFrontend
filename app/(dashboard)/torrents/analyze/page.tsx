@@ -14,7 +14,7 @@ import {
     Loader2,
     Cloud,
 } from 'lucide-react'
-import { formatFileSize, formatInfoHash, calculateTorrentHealth } from '@/lib/utils/formatters'
+import { formatFileSize, formatInfoHash } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
@@ -55,8 +55,8 @@ export default function TorrentAnalyzePage() {
         )
     }
 
-    // Calculate health from scrape result
-    const health = calculateTorrentHealth(analysisResult.scrapeResult)
+    // Health data from analysis response
+    const health = analysisResult.torrentHealth
 
     // Calculate selected size
     const selectedSize = analysisResult.files
@@ -112,7 +112,7 @@ export default function TorrentAnalyzePage() {
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <FileText className="h-5 w-5" />
-                                {analysisResult.name}
+                                {analysisResult.fileName}
                             </CardTitle>
                             <CardDescription className="flex items-center gap-2">
                                 <span className="font-mono text-xs">{formatInfoHash(analysisResult.infoHash, 12)}</span>
@@ -122,18 +122,14 @@ export default function TorrentAnalyzePage() {
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid gap-4 sm:grid-cols-3">
+                            <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
                                     <p className="text-sm text-muted-foreground">Total Size</p>
-                                    <p className="font-medium">{formatFileSize(analysisResult.totalSize)}</p>
+                                    <p className="font-medium">{formatFileSize(analysisResult.totalSizeInBytes)}</p>
                                 </div>
                                 <div>
                                     <p className="text-sm text-muted-foreground">Files</p>
                                     <p className="font-medium">{analysisResult.files.length} files</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Trackers</p>
-                                    <p className="font-medium">{analysisResult.trackers.length} trackers</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -224,15 +220,15 @@ export default function TorrentAnalyzePage() {
                             </div>
                             <div className="grid grid-cols-3 gap-2 text-center text-sm">
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-teal-secondary">{analysisResult.scrapeResult.seeders}</p>
+                                    <p className="font-medium text-teal-secondary">{health.seeders}</p>
                                     <p className="text-xs text-muted-foreground">Seeders</p>
                                 </div>
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-sage">{analysisResult.scrapeResult.leechers}</p>
+                                    <p className="font-medium text-sage">{health.leechers}</p>
                                     <p className="text-xs text-muted-foreground">Leechers</p>
                                 </div>
                                 <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium">{analysisResult.scrapeResult.completed}</p>
+                                    <p className="font-medium">{health.completed}</p>
                                     <p className="text-xs text-muted-foreground">Completed</p>
                                 </div>
                             </div>

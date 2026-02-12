@@ -7,7 +7,7 @@ import {
 
 import type {
     TorrentFile,
-    TorrentAnalysis,
+    TorrentAnalysisResponse,
     StorageProfile,
     UserJob,
     PaginatedResult,
@@ -23,22 +23,22 @@ export const mockTorrentFiles: TorrentFile[] = [
     { index: 2, path: 'Ubuntu 22.04.3 LTS/SHA256SUMS', size: 512 },
 ]
 
-export const mockTorrentAnalysis: TorrentAnalysis = {
+export const mockTorrentAnalysis: TorrentAnalysisResponse = {
+    torrentFileId: 42,
+    fileName: 'Ubuntu 22.04.3 LTS Desktop',
     infoHash: 'a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0',
-    name: 'Ubuntu 22.04.3 LTS Desktop',
-    totalSize: 4800002560,
+    totalSizeInBytes: 4800002560,
     files: mockTorrentFiles,
-    trackers: [
-        'udp://tracker.opentrackr.org:1337/announce',
-        'udp://open.stealth.si:80/announce',
-        'udp://tracker.torrent.eu.org:451/announce',
-    ],
-    scrapeResult: {
+    torrentHealth: {
         seeders: 1250,
         leechers: 85,
         completed: 45000,
-        trackersSuccess: 3,
-        trackersTotal: 3,
+        seederRatio: 14.71,
+        isComplete: true,
+        isDead: false,
+        isWeak: false,
+        isHealthy: true,
+        healthScore: 92,
     },
 }
 

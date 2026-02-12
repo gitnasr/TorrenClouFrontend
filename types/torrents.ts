@@ -2,20 +2,6 @@
 import { z } from 'zod'
 
 // ============================================
-// Scrape Result Schema
-// ============================================
-
-export const scrapeAggregationResultSchema = z.object({
-    seeders: z.number(),
-    leechers: z.number(),
-    completed: z.number(),
-    trackersSuccess: z.number(),
-    trackersTotal: z.number(),
-})
-
-export type ScrapeAggregationResult = z.infer<typeof scrapeAggregationResultSchema>
-
-// ============================================
 // Torrent File Schema
 // ============================================
 
@@ -46,47 +32,28 @@ export const torrentHealthMeasurementsSchema = z.object({
 export type TorrentHealthMeasurements = z.infer<typeof torrentHealthMeasurementsSchema>
 
 // ============================================
-// Torrent Info (Analysis Response) Schema
+// Torrent Analysis Response Schema (Step 1)
 // ============================================
 
-export const torrentInfoSchema = z.object({
-    infoHash: z.string(),
-    name: z.string(),
-    totalSize: z.number(),
-    files: z.array(torrentFileSchema),
-    trackers: z.array(z.string()),
-    scrapeResult: scrapeAggregationResultSchema,
-    healthScore: z.number().optional(),
-    healthMultiplier: z.number().optional(),
-    health: torrentHealthMeasurementsSchema.optional(),
-})
-
-export type TorrentInfo = z.infer<typeof torrentInfoSchema>
-
-// ============================================
-// Analyze Response Schema
-// ============================================
-
-export const analyzeResponseSchema = z.object({
-    fileName: z.string(),
-    sizeInBytes: z.number(),
-    infoHash: z.string(),
-    torrentHealth: torrentHealthMeasurementsSchema,
+export const torrentAnalysisResponseSchema = z.object({
     torrentFileId: z.number(),
-    selectedFiles: z.array(z.string()),
-    message: z.string().nullable().optional(),
+    fileName: z.string(),
+    infoHash: z.string(),
+    totalSizeInBytes: z.number(),
+    files: z.array(torrentFileSchema),
+    torrentHealth: torrentHealthMeasurementsSchema,
 })
 
-export type AnalyzeResponse = z.infer<typeof analyzeResponseSchema>
+export type TorrentAnalysisResponse = z.infer<typeof torrentAnalysisResponseSchema>
 
 // ============================================
-// Create Job Request Schema
+// Create Job Request Schema (Step 2)
 // ============================================
 
 export const createJobRequestSchema = z.object({
     torrentFileId: z.number(),
     selectedFilePaths: z.array(z.string()).nullable().optional(),
-    storageProfileId: z.number().optional(),
+    storageProfileId: z.number(),
 })
 
 export type CreateJobRequest = z.infer<typeof createJobRequestSchema>
@@ -97,9 +64,7 @@ export type CreateJobRequest = z.infer<typeof createJobRequestSchema>
 
 export const jobCreationResultSchema = z.object({
     jobId: z.number(),
-    storageProfileId: z.number().optional(),
-    hasStorageProfileWarning: z.boolean(),
-    storageProfileWarningMessage: z.string().nullable().optional(),
+    storageProfileId: z.number(),
 })
 
 export type JobCreationResult = z.infer<typeof jobCreationResultSchema>
@@ -127,6 +92,7 @@ export const torrentErrorMessages: Record<string, string> = {
     ProfileNotFound: 'Storage profile not found',
     Unauthorized: 'Please sign in to continue',
     AccessDenied: 'You do not have permission to perform this action',
+    ActiveJobExists: 'An active job already exists for this torrent',
 }
 
 export function getTorrentErrorMessage(code: string): string {

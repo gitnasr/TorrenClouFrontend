@@ -1,11 +1,10 @@
 // Jobs API client with Zod validation
-import { z } from 'zod'
 import apiClient from '../axios'
 import {
     jobSchema,
     paginatedJobsSchema,
     jobStatisticsSchema,
-    jobTimelineEntrySchema,
+    paginatedJobTimelineSchema,
 } from '@/types/jobs'
 import type {
     Job,
@@ -13,10 +12,12 @@ import type {
     JobsQueryParams,
     JobStatistics,
     JobTimelineEntry,
+    PaginatedJobTimeline,
+    JobTimelineQueryParams,
 } from '@/types/jobs'
 
 // Re-export types for convenience
-export type { Job, PaginatedJobs, JobsQueryParams, JobStatistics, JobTimelineEntry }
+export type { Job, PaginatedJobs, JobsQueryParams, JobStatistics, JobTimelineEntry, PaginatedJobTimeline, JobTimelineQueryParams }
 export { getJobsErrorMessage, jobsErrorMessages } from '@/types/jobs'
 
 /**
@@ -78,16 +79,25 @@ export async function getJobStatistics(): Promise<JobStatistics> {
 }
 
 /**
- * Get job timeline (complete history of status changes)
- * GET /api/jobs/{id}/timeline
+ * Get job timeline (complete history of status changes) with pagination
+ * GET /api/jobs/{id}/timeline?pageNumber=&pageSize=
  */
-export async function getJobTimeline(jobId: number): Promise<JobTimelineEntry[]> {
-    const response = await apiClient.get<JobTimelineEntry[]>(`/jobs/${jobId}/timeline`)
+export async function getJobTimeline(jobId: number, params: JobTimelineQueryParams = {}): Promise<PaginatedJobTimeline> {
+    const searchParams = new URLSearchParams()
+
+    if (params.pageNumber) {
+        searchParams.set('pageNumber', params.pageNumber.toString())
+    }
+    if (params.pageSize) {
+        searchParams.set('pageSize', params.pageSize.toString())
+    }
+
+    const queryString = searchParams.toString()
+    const url = `/jobs/${jobId}/timeline${queryString ? `?${queryString}` : ''}`
+    const response = await apiClient.get<PaginatedJobTimeline>(url)
     
     try {
-        // Validate array of timeline entries
-        const entries = z.array(jobTimelineEntrySchema).parse(response.data)
-        return entries
+        return paginatedJobTimelineSchema.parse(response.data)
     } catch (error) {
         // Log validation errors for debugging
         console.error('Job timeline validation error:', error)
