@@ -5,7 +5,6 @@ import {
     useStorageProfile,
     useSetDefaultProfile,
     useDisconnectProfile,
-    useAuthenticateGoogleDrive,
     useReauthenticateGoogleDrive,
 } from '@/hooks/useStorageProfiles'
 import { LoadingState } from '@/components/shared'
@@ -29,7 +28,6 @@ export default function StorageDetailPage() {
     const { data: profile, isLoading, error } = useStorageProfile(profileId)
     const setDefaultMutation = useSetDefaultProfile()
     const disconnectMutation = useDisconnectProfile()
-    const authenticateMutation = useAuthenticateGoogleDrive()
     const reauthenticateMutation = useReauthenticateGoogleDrive()
 
     const handleSetDefault = () => {
@@ -46,11 +44,6 @@ export default function StorageDetailPage() {
         })
     }
 
-    const handleAuthenticate = () => {
-        if (!profile) return
-        authenticateMutation.mutate(profile.id)
-    }
-
     const handleReauthenticate = () => {
         if (!profile) return
         reauthenticateMutation.mutate(profile.id)
@@ -65,7 +58,6 @@ export default function StorageDetailPage() {
     }
 
     const isGoogleDrive = profile.providerType === StorageProviderType.GoogleDrive
-    const needsSetup = isGoogleDrive && !profile.isConfigured && !profile.needsReauth
     const needsReauth = isGoogleDrive && profile.needsReauth
 
     return (
@@ -103,36 +95,6 @@ export default function StorageDetailPage() {
                 </Card>
             )}
 
-            {/* Incomplete Setup Banner */}
-            {needsSetup && (
-                <Card className="border-warning/50 bg-warning/5">
-                    <CardContent className="p-4 flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                            <AlertTriangle className="h-5 w-5 text-warning shrink-0" />
-                            <div>
-                                <p className="font-medium text-warning">Setup Incomplete</p>
-                                <p className="text-sm text-muted-foreground">
-                                    Credentials have been saved but OAuth authentication has not been completed. Authenticate with Google to start using this profile.
-                                </p>
-                            </div>
-                        </div>
-                        <Button
-                            variant="default"
-                            className="shrink-0"
-                            onClick={handleAuthenticate}
-                            disabled={authenticateMutation.isPending}
-                        >
-                            {authenticateMutation.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                            )}
-                            Complete Setup
-                        </Button>
-                    </CardContent>
-                </Card>
-            )}
-
             {/* Profile Card */}
             <StorageProfileInfoCard profile={profile} />
 
@@ -144,11 +106,9 @@ export default function StorageDetailPage() {
                 profile={profile}
                 onSetDefault={handleSetDefault}
                 onDisconnect={handleDisconnect}
-                onAuthenticate={handleAuthenticate}
                 onReauthenticate={handleReauthenticate}
                 isSettingDefault={setDefaultMutation.isPending}
                 isDisconnecting={disconnectMutation.isPending}
-                isAuthenticating={authenticateMutation.isPending}
                 isReauthenticating={reauthenticateMutation.isPending}
             />
         </div>

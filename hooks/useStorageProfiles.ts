@@ -7,14 +7,15 @@ import {
     getStorageProfile,
     setDefaultStorageProfile,
     disconnectStorageProfile,
-    saveGoogleDriveCredentials,
-    authenticateGoogleDrive,
+    saveOAuthCredentials,
+    getOAuthCredentials,
+    connectGoogleDrive,
     reauthenticateGoogleDrive,
     openGoogleDriveAuthPopup,
     configureS3,
 } from '@/lib/api/storage'
 import { getStorageErrorMessage } from '@/types/storage'
-import type { StorageProfile, SaveGoogleDriveCredentialsRequest, ConfigureS3Request } from '@/types/storage'
+import type { StorageProfile, SaveOAuthCredentialsRequest, ConnectGoogleDriveRequest, ConfigureS3Request } from '@/types/storage'
 import { useStorageProfilesStore } from '@/stores/storageProfilesStore'
 import { extractApiError } from '@/lib/api/errors'
 import { toast } from 'sonner'
@@ -29,6 +30,7 @@ export const storageProfileKeys = {
     list: () => [...storageProfileKeys.lists()] as const,
     details: () => [...storageProfileKeys.all, 'detail'] as const,
     detail: (id: number) => [...storageProfileKeys.details(), id] as const,
+    credentials: () => [...storageProfileKeys.all, 'credentials'] as const,
 }
 
 // ============================================
@@ -67,19 +69,33 @@ export function useStorageProfile(profileId: number) {
 // ============================================
 
 /**
- * Hook to save Google Drive OAuth credentials (Step 1 of two-step auth)
- * Creates a profile with isConfigured = false
+ * Hook to fetch all saved OAuth credentials
  */
-export function useSaveGoogleDriveCredentials() {
+export function useOAuthCredentials() {
+    const { status } = useSession()
+
+    return useQuery({
+        queryKey: storageProfileKeys.credentials(),
+        queryFn: getOAuthCredentials,
+        enabled: status === 'authenticated',
+        staleTime: 30 * 1000, // 30 seconds
+    })
+}
+
+/**
+ * Hook to save reusable OAuth app credentials
+ * Upserts by ClientId — if the same ClientId exists, it updates instead of creating a duplicate.
+ */
+export function useSaveOAuthCredentials() {
+    const queryClient = useQueryClient()
     const {
         setConnecting,
         setConnectionError,
-        setPendingProfileId,
-        setCurrentStep,
+        setCredentialsFormOpen,
     } = useStorageProfilesStore()
 
     return useMutation({
-        mutationFn: (data: SaveGoogleDriveCredentialsRequest) => saveGoogleDriveCredentials(data),
+        mutationFn: (data: SaveOAuthCredentialsRequest) => saveOAuthCredentials(data),
 
         onMutate: () => {
             setConnecting(true)
@@ -88,10 +104,10 @@ export function useSaveGoogleDriveCredentials() {
 
         onSuccess: (result) => {
             setConnecting(false)
-            setPendingProfileId(result.profileId)
-            setCurrentStep(2)
+            setCredentialsFormOpen(false)
+            queryClient.invalidateQueries({ queryKey: storageProfileKeys.credentials() })
             toast.success('Credentials saved', {
-                description: `Profile "${result.profileName}" created. Now authenticate with Google.`,
+                description: `"${result.name}" is ready to use for connecting Google Drive accounts.`,
             })
         },
 
@@ -108,10 +124,10 @@ export function useSaveGoogleDriveCredentials() {
 }
 
 /**
- * Hook to authenticate a Google Drive profile (Step 2 of two-step auth)
- * Opens a popup for Google OAuth consent flow
+ * Hook to connect a new Google Drive account using a saved credential
+ * Creates a profile AND starts OAuth in one step via popup
  */
-export function useAuthenticateGoogleDrive() {
+export function useConnectGoogleDrive() {
     const queryClient = useQueryClient()
     const {
         setConnecting,
@@ -120,8 +136,8 @@ export function useAuthenticateGoogleDrive() {
     } = useStorageProfilesStore()
 
     return useMutation({
-        mutationFn: async (profileId: number) => {
-            const { authorizationUrl } = await authenticateGoogleDrive(profileId)
+        mutationFn: async (data: ConnectGoogleDriveRequest) => {
+            const { authorizationUrl } = await connectGoogleDrive(data)
             return openGoogleDriveAuthPopup(authorizationUrl)
         },
 
@@ -145,7 +161,7 @@ export function useAuthenticateGoogleDrive() {
                 ? getStorageErrorMessage(extracted.code, extracted.message)
                 : extracted.message
             setConnectionError(errorMessage)
-            toast.error('Authentication Failed', { description: errorMessage })
+            toast.error('Connection Failed', { description: errorMessage })
         },
     })
 }

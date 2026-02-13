@@ -11,11 +11,9 @@ interface StorageActionsCardProps {
     profile: StorageProfile
     onSetDefault?: () => void
     onDisconnect?: () => void
-    onAuthenticate?: () => void
     onReauthenticate?: () => void
     isSettingDefault?: boolean
     isDisconnecting?: boolean
-    isAuthenticating?: boolean
     isReauthenticating?: boolean
 }
 
@@ -23,11 +21,9 @@ export function StorageActionsCard({
     profile,
     onSetDefault,
     onDisconnect,
-    onAuthenticate,
     onReauthenticate,
     isSettingDefault,
     isDisconnecting,
-    isAuthenticating,
     isReauthenticating,
 }: StorageActionsCardProps) {
     const config = getStorageProviderConfig(profile.providerType)
@@ -53,23 +49,6 @@ export function StorageActionsCard({
                             <RefreshCw className="mr-2 h-4 w-4" />
                         )}
                         Reconnect Google Drive
-                    </Button>
-                )}
-
-                {/* Complete setup button (shown when credentials saved but not yet authenticated) */}
-                {isGoogleDrive && !profile.isConfigured && !profile.needsReauth && onAuthenticate && (
-                    <Button
-                        variant="outline"
-                        className="w-full justify-start border-warning text-warning hover:text-warning hover:bg-warning/10"
-                        onClick={onAuthenticate}
-                        disabled={isAuthenticating}
-                    >
-                        {isAuthenticating ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                        )}
-                        Complete Setup — Authenticate with Google
                     </Button>
                 )}
 

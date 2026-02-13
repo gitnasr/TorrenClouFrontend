@@ -84,6 +84,14 @@ export interface GoogleDriveAuthResponse {
   authorizationUrl: string
 }
 
+export interface OAuthCredential {
+  id: number
+  name: string
+  clientIdMasked: string
+  redirectUri: string
+  createdAt: string
+}
+
 // ============================================
 // Job Models
 // ============================================

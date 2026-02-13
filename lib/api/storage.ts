@@ -4,52 +4,72 @@ import {
     StorageProfileSchema,
     StorageProfileDetailSchema,
     StorageProfilesArraySchema,
-    SaveGoogleDriveCredentialsRequestSchema,
-    SaveGoogleDriveCredentialsResponseSchema,
+    SaveOAuthCredentialsRequestSchema,
+    SaveOAuthCredentialsResponseSchema,
+    OAuthCredentialsArraySchema,
+    ConnectGoogleDriveRequestSchema,
     GoogleDriveAuthResponseSchema,
     ConfigureS3RequestSchema,
 } from '@/types/storage'
 import type {
     StorageProfile,
     StorageProfileDetail,
-    SaveGoogleDriveCredentialsRequest,
-    SaveGoogleDriveCredentialsResponse,
+    SaveOAuthCredentialsRequest,
+    SaveOAuthCredentialsResponse,
+    OAuthCredential,
+    ConnectGoogleDriveRequest,
     GoogleDriveAuthResponse,
     ConfigureS3Request,
 } from '@/types/storage'
 
 // Re-export types for convenience
-export type { StorageProfile, StorageProfileDetail, SaveGoogleDriveCredentialsRequest, SaveGoogleDriveCredentialsResponse, GoogleDriveAuthResponse, ConfigureS3Request }
+export type { StorageProfile, StorageProfileDetail, SaveOAuthCredentialsRequest, SaveOAuthCredentialsResponse, OAuthCredential, ConnectGoogleDriveRequest, GoogleDriveAuthResponse, ConfigureS3Request }
 export { getStorageErrorMessage, storageErrorMessages } from '@/types/storage'
 
 /**
- * Step 1: Save Google OAuth credentials to create a new storage profile
+ * Save reusable OAuth app credentials (upserts by ClientId)
  * POST /api/storage/gdrive/credentials
  *
- * Creates a profile with isConfigured = false. Must be followed by authenticateGoogleDrive.
+ * Saves credentials once — can be referenced by multiple /connect calls.
  */
-export async function saveGoogleDriveCredentials(
-    data: SaveGoogleDriveCredentialsRequest
-): Promise<SaveGoogleDriveCredentialsResponse> {
-    const validatedData = SaveGoogleDriveCredentialsRequestSchema.parse(data)
-    const response = await apiClient.post<SaveGoogleDriveCredentialsResponse>(
+export async function saveOAuthCredentials(
+    data: SaveOAuthCredentialsRequest
+): Promise<SaveOAuthCredentialsResponse> {
+    const validatedData = SaveOAuthCredentialsRequestSchema.parse(data)
+    const response = await apiClient.post<SaveOAuthCredentialsResponse>(
         '/storage/gdrive/credentials',
         validatedData
     )
-    return SaveGoogleDriveCredentialsResponseSchema.parse(response.data)
+    return SaveOAuthCredentialsResponseSchema.parse(response.data)
 }
 
 /**
- * Step 2: Initiate Google OAuth consent flow using saved credentials
- * POST /api/storage/gdrive/{profileId}/authenticate
+ * List all saved OAuth app credentials for the current user
+ * GET /api/storage/gdrive/credentials
  *
+ * ClientSecret is never returned. ClientId is masked.
+ */
+export async function getOAuthCredentials(): Promise<OAuthCredential[]> {
+    const response = await apiClient.get<OAuthCredential[]>(
+        '/storage/gdrive/credentials'
+    )
+    return OAuthCredentialsArraySchema.parse(response.data)
+}
+
+/**
+ * Connect a new Google Drive account using a saved credential
+ * POST /api/storage/gdrive/connect
+ *
+ * Creates a new storage profile AND starts the OAuth flow in one step.
  * @returns Authorization URL to redirect the user to Google consent screen
  */
-export async function authenticateGoogleDrive(
-    profileId: number
+export async function connectGoogleDrive(
+    data: ConnectGoogleDriveRequest
 ): Promise<GoogleDriveAuthResponse> {
+    const validatedData = ConnectGoogleDriveRequestSchema.parse(data)
     const response = await apiClient.post<GoogleDriveAuthResponse>(
-        `/storage/gdrive/${profileId}/authenticate`
+        '/storage/gdrive/connect',
+        validatedData
     )
     return GoogleDriveAuthResponseSchema.parse(response.data)
 }

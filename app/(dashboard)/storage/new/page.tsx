@@ -138,7 +138,7 @@ export default function NewStoragePage() {
                         <CardTitle>Connect {selectedProviderInfo.name}</CardTitle>
                         <CardDescription>
                             {selectedProvider === StorageProviderType.GoogleDrive
-                                ? 'Enter your Google Cloud OAuth credentials to connect'
+                                ? 'Manage your Google OAuth credentials and connect Drive accounts'
                                 : selectedProvider === StorageProviderType.AwsS3
                                     ? 'Enter your S3-compatible storage credentials'
                                     : 'Configure your storage connection'}

@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Cloud, Settings, Star, Loader2, Mail, AlertTriangle, ExternalLink } from 'lucide-react'
 import { StorageProviderType } from '@/types/enums'
 import type { StorageProfileCardProps } from '@/types/storage'
-import { useSetDefaultProfile, useAuthenticateGoogleDrive, useReauthenticateGoogleDrive } from '@/hooks/useStorageProfiles'
+import { useSetDefaultProfile, useReauthenticateGoogleDrive } from '@/hooks/useStorageProfiles'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 
@@ -35,7 +35,6 @@ const providerConfig: Record<StorageProviderType, { icon: React.ReactNode; color
 
 export function StorageProfileCard({ profile, className }: StorageProfileCardProps) {
     const setDefaultMutation = useSetDefaultProfile()
-    const authenticateMutation = useAuthenticateGoogleDrive()
     const reauthenticateMutation = useReauthenticateGoogleDrive()
     const config = providerConfig[profile.providerType] || providerConfig[StorageProviderType.GoogleDrive]
 
@@ -44,23 +43,15 @@ export function StorageProfileCard({ profile, className }: StorageProfileCardPro
         setDefaultMutation.mutate(profile.id)
     }
 
-    const handleCompleteSetup = () => {
-        authenticateMutation.mutate(profile.id)
-    }
-
     const handleReauthenticate = () => {
         reauthenticateMutation.mutate(profile.id)
     }
 
     const isGoogleDrive = profile.providerType === StorageProviderType.GoogleDrive
-    const needsSetup = isGoogleDrive && !profile.isConfigured && !profile.needsReauth
     const needsReauth = isGoogleDrive && profile.needsReauth
-    const isActionPending = authenticateMutation.isPending || reauthenticateMutation.isPending
+    const isActionPending = reauthenticateMutation.isPending
 
     const getBadge = () => {
-        if (needsSetup) {
-            return <Badge variant="outline" className="border-warning text-warning">Setup Incomplete</Badge>
-        }
         if (needsReauth) {
             return <Badge variant="outline" className="border-danger text-danger">Reconnect Required</Badge>
         }
@@ -108,30 +99,8 @@ export function StorageProfileCard({ profile, className }: StorageProfileCardPro
                     </div>
                 )}
 
-                {/* Incomplete Setup Banner */}
-                {needsSetup && (
-                    <div className="mt-3 flex gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-sm text-warning">
-                        <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-                        <span>OAuth setup not completed. Authenticate to start using this profile.</span>
-                    </div>
-                )}
-
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    {needsSetup ? (
-                        <Button
-                            variant="default"
-                            size="sm"
-                            onClick={handleCompleteSetup}
-                            disabled={isActionPending}
-                        >
-                            {authenticateMutation.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                            )}
-                            Complete Setup
-                        </Button>
-                    ) : needsReauth ? (
+                    {needsReauth ? (
                         <Button
                             variant="default"
                             size="sm"
@@ -154,7 +123,7 @@ export function StorageProfileCard({ profile, className }: StorageProfileCardPro
                             </Link>
                         </Button>
                     )}
-                    {!profile.isDefault && !needsSetup && !needsReauth && (
+                    {!profile.isDefault && !needsReauth && (
                         <Button
                             variant="ghost"
                             size="sm"
