@@ -22,7 +22,7 @@ export const storageProviderConfig: Record<StorageProviderType, StorageProviderC
         color: 'text-info', 
         url: 'https://onedrive.live.com' 
     },
-    [StorageProviderType.AwsS3]: { 
+    [StorageProviderType.S3]: { 
         label: 'AWS S3', 
         color: 'text-danger', 
         url: 'https://s3.console.aws.amazon.com' 

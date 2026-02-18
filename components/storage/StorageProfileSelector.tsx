@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils'
 const providerIcons: Record<StorageProviderType, React.ReactNode> = {
     [StorageProviderType.GoogleDrive]: <Cloud className="h-4 w-4" />,
     [StorageProviderType.OneDrive]: <Cloud className="h-4 w-4" />,
-    [StorageProviderType.AwsS3]: <HardDrive className="h-4 w-4" />,
+    [StorageProviderType.S3]: <HardDrive className="h-4 w-4" />,
     [StorageProviderType.Dropbox]: <Cloud className="h-4 w-4" />,
 }
 

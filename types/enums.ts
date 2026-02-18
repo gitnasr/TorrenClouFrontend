@@ -3,7 +3,7 @@
 export enum StorageProviderType {
     GoogleDrive = "GoogleDrive",
     OneDrive = "OneDrive",
-    AwsS3 = "AwsS3",
+    S3 = "S3",
     Dropbox = "Dropbox"
 }
 

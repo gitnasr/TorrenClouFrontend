@@ -39,7 +39,7 @@ const providers = [
         available: false, // Coming soon
     },
     {
-        type: StorageProviderType.AwsS3,
+        type: StorageProviderType.S3,
         name: 'S3 Compatible',
         description: 'AWS S3, Backblaze B2, Cloudflare R2, and more',
         icon: Server,
@@ -139,7 +139,7 @@ export default function NewStoragePage() {
                         <CardDescription>
                             {selectedProvider === StorageProviderType.GoogleDrive
                                 ? 'Manage your Google OAuth credentials and connect Drive accounts'
-                                : selectedProvider === StorageProviderType.AwsS3
+                                : selectedProvider === StorageProviderType.S3
                                     ? 'Enter your S3-compatible storage credentials'
                                     : 'Configure your storage connection'}
                         </CardDescription>
@@ -148,7 +148,7 @@ export default function NewStoragePage() {
                         {selectedProvider === StorageProviderType.GoogleDrive && (
                             <GoogleDriveConfigForm onSuccess={handleSuccess} />
                         )}
-                        {selectedProvider === StorageProviderType.AwsS3 && (
+                        {selectedProvider === StorageProviderType.S3 && (
                             <S3ConfigForm onSuccess={handleSuccess} />
                         )}
                     </CardContent>

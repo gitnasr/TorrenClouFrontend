@@ -26,10 +26,10 @@ const providerConfig: Record<StorageProviderType, { icon: React.ReactNode; color
         color: 'text-info',
         label: 'OneDrive',
     },
-    [StorageProviderType.AwsS3]: {
+    [StorageProviderType.S3]: {
         icon: <Cloud className="h-5 w-5" />,
         color: 'text-danger',
-        label: 'AWS S3',
+        label: 'S3 Bucket',
     },
 }
 

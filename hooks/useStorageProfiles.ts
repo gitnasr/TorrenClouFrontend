@@ -195,10 +195,6 @@ export function useReauthenticateGoogleDrive() {
     })
 }
 
-/**
- * Hook to configure S3-compatible storage
- * Supports AWS S3, Backblaze B2, Cloudflare R2, and other S3-compatible providers
- */
 export function useConfigureS3() {
     const queryClient = useQueryClient()
     const {
