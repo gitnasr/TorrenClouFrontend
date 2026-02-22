@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatFileSize } from '@/lib/utils/formatters'
 import type { Job } from '@/types/jobs'
 import { getJobStatusConfig } from './JobStatusConfig'
@@ -10,58 +9,47 @@ interface JobDetailsCardProps {
     job: Job
 }
 
+function MetaField({ label, value }: { label: string; value: React.ReactNode }) {
+    return (
+        <div>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                {label}
+            </p>
+            <p className="text-sm font-mono text-foreground break-all">{value}</p>
+        </div>
+    )
+}
+
 export function JobDetailsCard({ job }: JobDetailsCardProps) {
     const config = getJobStatusConfig(job.status as JobStatus)
 
+    const selectedFilesLabel =
+        !job.selectedFilePaths || job.selectedFilePaths.length === 0
+            ? 'All files'
+            : `${job.selectedFilePaths.length} file${job.selectedFilePaths.length > 1 ? 's' : ''}`
+
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Job Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                        <p className="text-sm text-muted-foreground">Job ID</p>
-                        <p className="font-medium">#{job.id}</p>
+        <div className="bg-card border border-border rounded-xl overflow-hidden shadow-sm">
+            {/* Card header */}
+            <div className="px-6 py-4 border-b border-border bg-background/50 flex items-center justify-between">
+                <h3 className="text-base font-semibold">Job Metadata</h3>
+            </div>
+
+            {/* Details grid */}
+            <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-8">
+                <MetaField label="Job ID" value={`#${job.id}`} />
+                <MetaField label="Status" value={config.label} />
+                <MetaField label="Torrent Name" value={job.requestFileName || '—'} />
+                <MetaField label="Total Size" value={formatFileSize(job.totalBytes)} />
+                <MetaField label="Selected Files" value={selectedFilesLabel} />
+                <MetaField label="Storage Profile" value={job.storageProfileName || 'Unknown'} />
+                {job.currentState && (
+                    <div className="sm:col-span-2">
+                        <MetaField label="Current State" value={job.currentState} />
                     </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground">Status</p>
-                        <p className="font-medium">{config.label}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground">Request File Name</p>
-                        <p className="font-medium">{job.requestFileName || 'N/A'}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground">Total Size</p>
-                        <p className="font-medium">{formatFileSize(job.totalBytes)}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground">Selected Files</p>
-                        <p className="font-medium">
-                            {!job.selectedFilePaths || job.selectedFilePaths.length === 0
-                                ? 'All files'
-                                : `${job.selectedFilePaths.length} file${job.selectedFilePaths.length > 1 ? 's' : ''}`}
-                        </p>
-                        {job.selectedFilePaths && job.selectedFilePaths.length > 0 && job.selectedFilePaths.length <= 10 && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {job.selectedFilePaths.slice(0, 5).map(p => p.split('/').pop()).join(', ')}{job.selectedFilePaths.length > 5 ? '...' : ''}
-                            </p>
-                        )}
-                    </div>
-                    <div>
-                        <p className="text-sm text-muted-foreground">Storage Profile</p>
-                        <p className="font-medium">{job.storageProfileName || 'Unknown'}</p>
-                    </div>
-                    {job.currentState && (
-                        <div className="sm:col-span-2">
-                            <p className="text-sm text-muted-foreground">Current State</p>
-                            <p className="font-medium">{job.currentState}</p>
-                        </div>
-                    )}
-                </div>
-            </CardContent>
-        </Card>
+                )}
+            </div>
+        </div>
     )
 }
 

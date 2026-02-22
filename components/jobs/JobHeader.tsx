@@ -12,7 +12,9 @@ import {
     RefreshCcw,
     StopCircle,
     Loader2,
+    ArrowLeft,
 } from 'lucide-react'
+import Link from 'next/link'
 import type { Job } from '@/types/jobs'
 import { getJobStatusConfig } from './JobStatusConfig'
 import { JobStatus } from '@/types/enums'
@@ -35,22 +37,40 @@ export function JobHeader({
     const { openCancelModal } = useJobsStore()
 
     return (
-        <div className="flex items-start justify-between">
-            <div className="space-y-1">
-                <h1 className="text-2xl font-bold">{job.requestFileName || `Job #${job.id}`}</h1>
-                <p className="text-muted-foreground">Job #{job.id}</p>
-                {job.currentState && (
-                    <p className="text-sm text-muted-foreground mt-1">{job.currentState}</p>
-                )}
-            </div>
-            <div className="flex flex-col items-end gap-2">
-                <div className="flex items-center gap-2">
-                    <Badge variant={config.badgeVariant} className="text-sm">
-                        {config.label}
-                    </Badge>
+        <div className="flex flex-col gap-4">
+            {/* Back link */}
+            <Link
+                href="/jobs"
+                className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
+            >
+                <ArrowLeft className="h-4 w-4" />
+                Jobs
+            </Link>
+
+            {/* Title row */}
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="text-2xl font-bold tracking-tight">
+                            Job{' '}
+                            <span className="font-mono text-muted-foreground text-xl">
+                                #{job.id}
+                            </span>
+                        </h1>
+                        <Badge variant={config.badgeVariant}>
+                            {config.label}
+                        </Badge>
+                    </div>
+                    {job.requestFileName && (
+                        <p className="text-sm text-muted-foreground">{job.requestFileName}</p>
+                    )}
+                    {job.currentState && (
+                        <p className="text-xs text-muted-foreground">{job.currentState}</p>
+                    )}
                 </div>
-                {/* Action Buttons */}
-                <div className="flex gap-2">
+
+                {/* Action buttons */}
+                <div className="flex gap-2 shrink-0">
                     {job.canRetry && onRetry && (
                         <TooltipProvider delayDuration={100}>
                             <Tooltip>
@@ -80,17 +100,18 @@ export function JobHeader({
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Button
-                                        variant="destructive"
+                                        variant="outline"
                                         size="sm"
                                         onClick={openCancelModal}
                                         disabled={isCancelling}
+                                        className="border-danger/50 text-danger hover:bg-danger/10 hover:text-danger"
                                     >
                                         {isCancelling ? (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                         ) : (
                                             <StopCircle className="mr-2 h-4 w-4" />
                                         )}
-                                        Cancel
+                                        Cancel Job
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>

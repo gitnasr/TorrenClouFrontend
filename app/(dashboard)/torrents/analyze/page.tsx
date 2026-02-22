@@ -2,17 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     ArrowLeft,
-    ArrowRight,
-    FileText,
     Copy,
     Check,
     Loader2,
-    Cloud,
+    BarChart2,
+    Lightbulb,
+    File,
+    FileText,
+    Disc,
+    Archive,
+    Film,
+    Music2,
+    ImageIcon,
+    Activity,
+    ArrowUp,
+    ArrowDown,
 } from 'lucide-react'
 import { formatFileSize, formatInfoHash } from '@/lib/utils/formatters'
 import { toast } from 'sonner'
@@ -23,11 +31,27 @@ import { useTorrentStore } from '@/stores/torrentStore'
 import { useStartDownload } from '@/hooks/useTorrents'
 import { StorageProfileSelector } from '@/components/storage'
 
+function getFileIcon(path: string) {
+    const ext = path.split('.').pop()?.toLowerCase() ?? ''
+    if (ext === 'pdf')
+        return <FileText className="h-[18px] w-[18px] shrink-0 text-red-400" />
+    if (['iso', 'img', 'dmg'].includes(ext))
+        return <Disc className="h-[18px] w-[18px] shrink-0 text-purple-400" />
+    if (['zip', 'tar', 'gz', 'rar', '7z'].includes(ext))
+        return <Archive className="h-[18px] w-[18px] shrink-0 text-yellow-400" />
+    if (['mp4', 'mkv', 'avi', 'mov'].includes(ext))
+        return <Film className="h-[18px] w-[18px] shrink-0 text-blue-400" />
+    if (['mp3', 'flac', 'wav'].includes(ext))
+        return <Music2 className="h-[18px] w-[18px] shrink-0 text-pink-400" />
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext))
+        return <ImageIcon className="h-[18px] w-[18px] shrink-0 text-green-400" />
+    return <File className="h-[18px] w-[18px] shrink-0 text-muted-foreground" />
+}
+
 export default function TorrentAnalyzePage() {
     const router = useRouter()
     const [copied, setCopied] = useState(false)
 
-    // Zustand store
     const {
         analysisResult,
         selectedFilePaths,
@@ -37,10 +61,8 @@ export default function TorrentAnalyzePage() {
         selectedStorageProfileId,
     } = useTorrentStore()
 
-    // API hook - combined analyze + createJob
     const startDownload = useStartDownload()
 
-    // Redirect to upload if no analysis result
     useEffect(() => {
         if (!analysisResult) {
             router.push('/torrents/upload')
@@ -55,10 +77,8 @@ export default function TorrentAnalyzePage() {
         )
     }
 
-    // Health data from analysis response
     const health = analysisResult.torrentHealth
 
-    // Calculate selected size
     const selectedSize = analysisResult.files
         .filter((f) => selectedFilePaths.includes(f.path))
         .reduce((acc, f) => acc + f.size, 0)
@@ -83,192 +103,239 @@ export default function TorrentAnalyzePage() {
     }
 
     const getHealthColor = (score: number) => {
-        if (score >= 80) return 'text-teal-secondary'
+        if (score >= 80) return 'text-primary'
         if (score >= 50) return 'text-warning'
-        return 'text-sage'
+        return 'text-danger'
     }
 
     return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-6">
+
+            {/* Page Header */}
+            <div className="flex items-center gap-3">
                 <Button variant="ghost" size="sm" asChild>
                     <Link href="/torrents/upload">
-                        <ArrowLeft className="mr-2 h-4 w-4" />
+                        <ArrowLeft className="mr-1.5 h-4 w-4" />
                         Back
                     </Link>
                 </Button>
                 <div>
-                    <h1 className="text-2xl font-bold">Torrent Analysis</h1>
-                    <p className="text-muted-foreground">Review and select files to download</p>
+                    <h1 className="text-xl font-bold">Torrent Analysis</h1>
+                    <p className="text-sm text-muted-foreground">Review and select files to download</p>
                 </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-                {/* Main Content */}
-                <div className="space-y-6 lg:col-span-2">
-                    {/* Torrent Info */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <FileText className="h-5 w-5" />
-                                {analysisResult.fileName}
-                            </CardTitle>
-                            <CardDescription className="flex items-center gap-2">
-                                <span className="font-mono text-xs">{formatInfoHash(analysisResult.infoHash, 12)}</span>
-                                <button onClick={handleCopyHash} className="text-primary hover:text-primary/80">
-                                    {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                                </button>
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Total Size</p>
-                                    <p className="font-medium">{formatFileSize(analysisResult.totalSizeInBytes)}</p>
-                                </div>
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Files</p>
-                                    <p className="font-medium">{analysisResult.files.length} files</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+            {/* Two-column layout */}
+            <div className="flex flex-col md:flex-row gap-6 items-start">
 
-                    {/* File Selection */}
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <div>
-                                <CardTitle>Select Files</CardTitle>
-                                <CardDescription>
-                                    Choose which files to download ({selectedFilePaths.length} of {analysisResult.files.length} selected)
-                                </CardDescription>
+                {/* LEFT COLUMN */}
+                <div className="flex-1 min-w-0 flex flex-col gap-4">
+
+                    {/* Torrent title + hash */}
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                            <h2 className="text-xl font-bold text-foreground truncate">
+                                {analysisResult.fileName}
+                            </h2>
+                            <div className="flex items-center gap-2 mt-1">
+                                <span className="font-mono text-xs text-muted-foreground">
+                                    {formatInfoHash(analysisResult.infoHash, 12)}
+                                </span>
+                                <button
+                                    onClick={handleCopyHash}
+                                    className="text-muted-foreground hover:text-primary transition-colors"
+                                >
+                                    {copied
+                                        ? <Check className="h-3.5 w-3.5 text-primary" />
+                                        : <Copy className="h-3.5 w-3.5" />
+                                    }
+                                </button>
+                                <span className="text-muted-foreground text-xs">·</span>
+                                <span className="text-xs text-muted-foreground">
+                                    {formatFileSize(analysisResult.totalSizeInBytes)} total
+                                </span>
                             </div>
-                            <div className="flex gap-2">
-                                <Button variant="outline" size="sm" onClick={selectAllFiles}>
+                        </div>
+                        <Badge variant="outline" className="shrink-0 text-primary border-primary/30 bg-primary/10 font-bold text-xs">
+                            TORRENT
+                        </Badge>
+                    </div>
+
+                    {/* Stats Row */}
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-card border border-border rounded-lg p-3 flex flex-col gap-1">
+                            <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center gap-1">
+                                <Activity className="h-3.5 w-3.5" /> Health
+                            </span>
+                            <span className={cn('text-lg font-bold font-mono', getHealthColor(health.healthScore))}>
+                                {health.healthScore}%
+                            </span>
+                        </div>
+                        <div className="bg-card border border-border rounded-lg p-3 flex flex-col gap-1">
+                            <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center gap-1">
+                                <ArrowUp className="h-3.5 w-3.5" /> Seeders
+                            </span>
+                            <span className="text-primary text-lg font-bold font-mono">
+                                {health.seeders.toLocaleString()}
+                            </span>
+                        </div>
+                        <div className="bg-card border border-border rounded-lg p-3 flex flex-col gap-1">
+                            <span className="text-muted-foreground text-xs font-medium uppercase tracking-wider flex items-center gap-1">
+                                <ArrowDown className="h-3.5 w-3.5" /> Leechers
+                            </span>
+                            <span className="text-warning text-lg font-bold font-mono">
+                                {health.leechers.toLocaleString()}
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* File List Card */}
+                    <div className="bg-card border border-border rounded-xl flex flex-col overflow-hidden shadow-sm">
+
+                        {/* List Header */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/50">
+                            <div className="flex items-center gap-3">
+                                <span className="text-sm font-semibold text-muted-foreground">
+                                    File Name
+                                    <span className="ml-2 text-xs font-normal">
+                                        ({selectedFilePaths.length}/{analysisResult.files.length} selected)
+                                    </span>
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAllFiles}>
                                     Select All
                                 </Button>
-                                <Button variant="outline" size="sm" onClick={deselectAllFiles}>
+                                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={deselectAllFiles}>
                                     Deselect All
                                 </Button>
+                                <span className="text-sm font-semibold text-muted-foreground w-20 text-right">
+                                    Size
+                                </span>
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                                {analysisResult.files.map((file) => (
+                        </div>
+
+                        {/* Scrollable file list */}
+                        <div className="overflow-y-auto max-h-[500px] p-2 space-y-0.5">
+                            {analysisResult.files.map((file) => {
+                                const isSelected = selectedFilePaths.includes(file.path)
+                                return (
                                     <div
                                         key={file.index}
-                                        className={cn(
-                                            'flex items-center gap-3 rounded-lg border p-3 transition-colors cursor-pointer',
-                                            selectedFilePaths.includes(file.path)
-                                                ? 'border-primary bg-primary/5'
-                                                : 'border-border hover:bg-muted/50'
-                                        )}
                                         onClick={() => toggleFileSelection(file.path)}
+                                        className={cn(
+                                            'flex items-center justify-between px-2 py-2 rounded-lg transition-colors cursor-pointer',
+                                            isSelected
+                                                ? 'bg-primary/5 border border-primary/10'
+                                                : 'border border-transparent hover:bg-white/5'
+                                        )}
                                     >
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedFilePaths.includes(file.path)}
-                                            onChange={() => toggleFileSelection(file.path)}
-                                            className="h-4 w-4 rounded border-muted-foreground"
-                                        />
-                                        <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-sm font-medium">{file.path}</p>
+                                        <div className="flex items-center gap-3 overflow-hidden">
+                                            <input
+                                                type="checkbox"
+                                                checked={isSelected}
+                                                onChange={() => toggleFileSelection(file.path)}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="h-4 w-4 shrink-0 rounded border-border accent-primary cursor-pointer"
+                                            />
+                                            {getFileIcon(file.path)}
+                                            <span className={cn(
+                                                'text-sm truncate',
+                                                isSelected ? 'text-foreground font-medium' : 'text-muted-foreground'
+                                            )}>
+                                                {file.path}
+                                            </span>
                                         </div>
-                                        <span className="shrink-0 text-sm text-muted-foreground">
+                                        <span className={cn(
+                                            'text-xs font-mono shrink-0 ml-3',
+                                            isSelected ? 'text-foreground font-bold' : 'text-muted-foreground'
+                                        )}>
                                             {formatFileSize(file.size)}
                                         </span>
                                     </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Storage Profile Selection */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Cloud className="h-5 w-5" />
-                                Storage Destination
-                            </CardTitle>
-                            <CardDescription>Select where to upload your files</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <StorageProfileSelector />
-                        </CardContent>
-                    </Card>
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Sidebar */}
-                <div className="space-y-4">
-                    {/* Health Card */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Torrent Health</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="text-center">
-                                <p className={cn('text-4xl font-bold', getHealthColor(health.healthScore))}>
-                                    {health.healthScore}%
-                                </p>
-                                <div className="mt-2 flex justify-center gap-2">
-                                    {health.isHealthy && <Badge variant="success">Healthy</Badge>}
-                                    {health.isWeak && <Badge variant="warning">Weak</Badge>}
-                                    {health.isDead && <Badge variant="destructive">Dead</Badge>}
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-3 gap-2 text-center text-sm">
-                                <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-teal-secondary">{health.seeders}</p>
-                                    <p className="text-xs text-muted-foreground">Seeders</p>
-                                </div>
-                                <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium text-sage">{health.leechers}</p>
-                                    <p className="text-xs text-muted-foreground">Leechers</p>
-                                </div>
-                                <div className="rounded-lg bg-muted p-2">
-                                    <p className="font-medium">{health.completed}</p>
-                                    <p className="text-xs text-muted-foreground">Completed</p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                {/* RIGHT COLUMN — Sticky Summary */}
+                <div className="w-full md:w-[380px] shrink-0 flex flex-col gap-4 md:sticky md:top-6">
 
-                    {/* Start Download */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Start Download</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Selected files</span>
-                                <span className="font-medium">{selectedFilePaths.length}</span>
+                    {/* Summary Card */}
+                    <div className="bg-card border border-border rounded-xl p-6 flex flex-col gap-5 relative overflow-hidden shadow-lg">
+                        {/* Ambient glow */}
+                        <div className="absolute -top-10 -right-10 w-40 h-40 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+
+                        <div className="relative flex flex-col gap-5">
+                            <h3 className="text-base font-bold flex items-center gap-2">
+                                <BarChart2 className="h-5 w-5 text-primary" />
+                                Job Summary
+                            </h3>
+
+                            {/* Key stats */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                        Selected Files
+                                    </span>
+                                    <span className="text-2xl font-bold tracking-tight">
+                                        {selectedFilePaths.length}
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                        Total Size
+                                    </span>
+                                    <span className="text-2xl font-bold tracking-tight font-mono">
+                                        {formatFileSize(selectedSize)}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-muted-foreground">Total size</span>
-                                <span className="font-medium">{formatFileSize(selectedSize)}</span>
+
+                            <hr className="border-border" />
+
+                            {/* Storage selector */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-medium text-foreground">
+                                    Save to Storage
+                                </label>
+                                <StorageProfileSelector />
                             </div>
+
+                            {/* Start button */}
                             <Button
                                 onClick={handleStartDownload}
                                 className="w-full"
                                 size="lg"
-                                disabled={selectedFilePaths.length === 0 || !selectedStorageProfileId || startDownload.isPending}
+                                disabled={
+                                    selectedFilePaths.length === 0 ||
+                                    !selectedStorageProfileId ||
+                                    startDownload.isPending
+                                }
                             >
                                 {startDownload.isPending ? (
                                     <>
                                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                        Starting Download...
+                                        Starting...
                                     </>
                                 ) : (
-                                    <>
-                                        Start Download
-                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                    </>
+                                    'Start Job'
                                 )}
                             </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+
+                    {/* Tip Card */}
+                    <div className="bg-card/50 border border-border rounded-xl p-4 flex gap-3 items-start">
+                        <Lightbulb className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                        <div className="flex flex-col gap-1">
+                            <p className="text-sm font-medium">Smart Selection</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                                Unselecting non-essential files like READMEs or extras can save bandwidth and storage space.
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

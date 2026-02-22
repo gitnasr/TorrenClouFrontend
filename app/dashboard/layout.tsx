@@ -10,7 +10,7 @@ export default async function Layout({
   const session = await auth()
 
   if (!session) {
-    redirect('/')
+    redirect('/login')
   }
 
   return <DashboardLayout>{children}</DashboardLayout>
