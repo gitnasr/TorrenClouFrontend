@@ -8,8 +8,7 @@ declare module 'next-auth' {
       id?: string
       name?: string | null
       email?: string | null
-      // image is never populated by the auth flow; omitting it here removes the
-      // false impression that it is always available.
+      image?: string | null
     }
   }
 }
@@ -21,6 +20,7 @@ declare module 'next-auth/jwt' {
       id?: string
       name?: string | null
       email?: string | null
+      image?: string | null
     }
   }
 }

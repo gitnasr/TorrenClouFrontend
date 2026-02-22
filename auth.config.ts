@@ -51,6 +51,7 @@ export const authConfig = {
             id: data.user?.id || email,
             email: data.user?.email || email,
             name: data.user?.name || data.user?.email || null,
+            image: data.user?.image ?? null,
             backendToken: data.accessToken,
           }
         } catch (error) {
@@ -77,6 +78,7 @@ export const authConfig = {
           id: user.id || '',
           name: user.name ?? null,
           email: user.email ?? null,
+          image: user.image ?? null,
         }
       }
       return token
@@ -86,11 +88,12 @@ export const authConfig = {
         session.backendToken = token.backendToken as string
       }
       if (token.user) {
-        const tokenUser = token.user as { id?: string; name?: string | null; email?: string | null }
+        const tokenUser = token.user as { id?: string; name?: string | null; email?: string | null; image?: string | null }
         if (session.user) {
           session.user.id = tokenUser.id || session.user.id
           session.user.name = tokenUser.name ?? session.user.name ?? null
           session.user.email = tokenUser.email ?? session.user.email ?? null
+          session.user.image = tokenUser.image ?? null
         }
       }
       return session

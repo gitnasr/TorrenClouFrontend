@@ -33,7 +33,7 @@ export function Topbar() {
           >
             <Avatar className="h-8 w-8">
               <AvatarImage
-                src={undefined}
+                src={session?.user?.image ?? undefined}
                 alt={session?.user?.name || session?.user?.email || 'User avatar'}
               />
               <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
