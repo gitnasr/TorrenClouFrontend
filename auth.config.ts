@@ -1,34 +1,41 @@
 import type { NextAuthConfig } from 'next-auth'
-import Google from 'next-auth/providers/google'
+import Credentials from 'next-auth/providers/credentials'
 import axios from 'axios'
 import https from 'https'
 import type { BackendAuthResponse } from '@/types/api'
-import type { ExtendedAccount } from '@/types/auth'
 
 export const authConfig = {
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    }),
-  ],
-  callbacks: {
-    async signIn({ account }) {
-      console.log('signIn', account)
-      if (account?.provider === 'google' && account.id_token) {
+    Credentials({
+      name: 'credentials',
+      credentials: {
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
+      },
+      async authorize(credentials) {
+        // Runtime type validation — reject non-string or empty values early
+        if (
+          typeof credentials?.email !== 'string' || !credentials.email ||
+          typeof credentials?.password !== 'string' || !credentials.password
+        ) {
+          return null
+        }
+
+        const email = credentials.email
+        const password = credentials.password
+
         try {
-          // Send id_token to backend
-          const httpsAgent = new https.Agent({
-            rejectUnauthorized: false, // Allow self-signed certificates for localhost
-          })
-          
+          // Only disable TLS verification in development (e.g. self-signed certs on localhost)
+          const httpsAgent =
+            process.env.NODE_ENV === 'development' || process.env.ALLOW_INSECURE_TLS === 'true'
+              ? new https.Agent({ rejectUnauthorized: false })
+              : new https.Agent()
+
+          const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000'
           const response = await axios.post<BackendAuthResponse>(
-            `https://localhost:7185/api/auth/google-login`,
-            {
-              idToken: account.id_token,
-              provider: account.provider,
-            },
+            `${baseUrl}/api/auth/login`,
+            { email, password },
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -38,57 +45,61 @@ export const authConfig = {
           )
 
           const data = response.data
-          // Store backend response in account for later use in JWT callback
-          // Note: In NextAuth v5, we need to pass this through the JWT callback
-          const extendedAccount = account as ExtendedAccount
-          extendedAccount.backendToken = data.accessToken
-          extendedAccount.userData = data.user
-          return true
-        } catch (error) {
-          console.error('Backend auth error:', (error as any).response)
-          return false
-        }
-      }
-      return true
-    },
-    async jwt({ token, account, user }) {
-      // Initial sign in
-      if (account && user) {
-        const extendedAccount = account as ExtendedAccount
-        token.backendToken = extendedAccount.backendToken
-        if (extendedAccount.userData) {
-          token.user = extendedAccount.userData
-        } else {
-          token.user = {
-            id: user.id || '',
-            name: user.name ?? null,
-            email: user.email ?? null,
-            image: user.image ?? null,
+
+          // Return user object with backend token
+          return {
+            id: data.user?.id || email,
+            email: data.user?.email || email,
+            name: data.user?.name || data.user?.email || null,
+            image: data.user?.image ?? null,
+            backendToken: data.accessToken,
           }
+        } catch (error) {
+          // Log only non-sensitive identifiers — never log response body or credentials
+          const status = (error as any).response?.status
+          const code = (error as any).code
+          console.error('Backend auth error', {
+            name: (error as Error).name,
+            message: (error as Error).message,
+            status,
+            code,
+          })
+          return null
+        }
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      // Initial sign in
+      if (user) {
+        token.backendToken = (user as any).backendToken
+        token.user = {
+          id: user.id || '',
+          name: user.name ?? null,
+          email: user.email ?? null,
+          image: user.image ?? null,
         }
       }
       return token
     },
     async session({ session, token }) {
       if (token.backendToken) {
-        session.backendToken = token.backendToken
+        session.backendToken = token.backendToken as string
       }
       if (token.user) {
+        const tokenUser = token.user as { id?: string; name?: string | null; email?: string | null; image?: string | null }
         if (session.user) {
-          session.user.id = token.user.id || session.user.id
-          session.user.name = token.user.name ?? session.user.name ?? null
-          session.user.email = token.user.email ?? session.user.email ?? null
-          session.user.image = token.user.image ?? session.user.image ?? null
-          session.user.balance = token.user.balance
-          session.user.region = token.user.region
-          session.user.role = token.user.role
+          session.user.id = tokenUser.id || session.user.id
+          session.user.name = tokenUser.name ?? session.user.name ?? null
+          session.user.email = tokenUser.email ?? session.user.email ?? null
+          session.user.image = tokenUser.image ?? null
         }
       }
       return session
     },
   },
   pages: {
-    signIn: '/',
+    signIn: '/login',
   },
 } satisfies NextAuthConfig
-

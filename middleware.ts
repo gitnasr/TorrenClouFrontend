@@ -5,9 +5,18 @@ export default auth((req) => {
   const { pathname } = req.nextUrl
   const isLoggedIn = !!req.auth
 
-  // Protect dashboard routes
-  if (pathname.startsWith('/dashboard') && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/', req.url))
+  // Protected routes that require authentication
+  const protectedPaths = ['/dashboard', '/torrents', '/jobs', '/storage']
+  
+  const isProtectedRoute = protectedPaths.some(path => pathname.startsWith(path))
+
+  if (isProtectedRoute && !isLoggedIn) {
+    return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  // Redirect authenticated users away from login page
+  if (pathname === '/login' && isLoggedIn) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
   }
 
   return NextResponse.next()
@@ -16,4 +25,3 @@ export default auth((req) => {
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
 }
-

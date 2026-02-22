@@ -179,7 +179,7 @@ export function JobCard({ job, className }: JobCardProps) {
                                             <FileText className="h-3.5 w-3.5" />
                                             {formatFileSize(job.totalBytes)}
                                         </span>
-                                        {job.selectedFilePaths.length > 0 && (
+                                        {job.selectedFilePaths && job.selectedFilePaths.length > 0 && (
                                             <span className="flex items-center gap-1">
                                                 {job.selectedFilePaths.length} file{job.selectedFilePaths.length > 1 ? 's' : ''}
                                             </span>
@@ -198,9 +198,6 @@ export function JobCard({ job, className }: JobCardProps) {
                                 </div>
                                 <div className="flex items-center gap-2 shrink-0">
                                     <Badge variant={config.badgeVariant}>{config.label}</Badge>
-                                    {job.isRefunded && (
-                                        <Badge variant="secondary">Refunded</Badge>
-                                    )}
                                     <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                                 </div>
                             </div>

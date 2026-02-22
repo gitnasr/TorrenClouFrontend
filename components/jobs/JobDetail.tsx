@@ -127,6 +127,16 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
     )
 }
 
+// Active statuses for determining if a job is in progress
+const ACTIVE_STATUSES = [
+    'QUEUED',
+    'DOWNLOADING',
+    'PENDING_UPLOAD',
+    'UPLOADING',
+    'TORRENT_DOWNLOAD_RETRY',
+    'UPLOAD_RETRY'
+] as const
+
 export function JobDetail() {
     const { selectedJobId, setSelectedJobId } = useJobsStore()
     const { data: job, isLoading, error } = useJob(selectedJobId)
@@ -167,7 +177,8 @@ export function JobDetail() {
         )
     }
 
-    const config = statusConfig[job.status] || statusConfig[JobStatus.QUEUED]
+    const config = statusConfig[job.status as JobStatus] || statusConfig[JobStatus.QUEUED]
+    const isActive = ACTIVE_STATUSES.includes(job.status as typeof ACTIVE_STATUSES[number])
 
     return (
         <Card className="h-full">
@@ -183,7 +194,7 @@ export function JobDetail() {
                         </div>
                         <div>
                             <CardTitle className="text-lg">Job #{job.id}</CardTitle>
-                            <Badge variant={job.isActive ? 'default' : 'secondary'} className="mt-1">
+                            <Badge variant={isActive ? 'default' : 'secondary'} className="mt-1">
                                 {config.label}
                             </Badge>
                         </div>
@@ -201,7 +212,7 @@ export function JobDetail() {
 
             <CardContent className="space-y-6">
                 {/* Progress Section */}
-                {job.isActive && job.totalBytes > 0 && (
+                {isActive && job.totalBytes > 0 && (
                     <div className="space-y-3 p-4 bg-surface-100 rounded-xl">
                         <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">Progress</span>
@@ -268,7 +279,7 @@ export function JobDetail() {
                             value={formatFileSize(job.totalBytes)}
                         />
 
-                        {job.selectedFilePaths.length > 0 && (
+                        {job.selectedFilePaths && job.selectedFilePaths.length > 0 && (
                             <DetailRow
                                 icon={<Files className="h-4 w-4" />}
                                 label="Selected Files"
@@ -306,14 +317,6 @@ export function JobDetail() {
                                 icon={<CheckCircle className="h-4 w-4" />}
                                 label="Completed"
                                 value={formatRelativeTime(job.completedAt)}
-                            />
-                        )}
-
-                        {job.lastHeartbeat && job.isActive && (
-                            <DetailRow
-                                icon={<Activity className="h-4 w-4" />}
-                                label="Last Update"
-                                value={formatRelativeTime(job.lastHeartbeat)}
                             />
                         )}
                     </div>

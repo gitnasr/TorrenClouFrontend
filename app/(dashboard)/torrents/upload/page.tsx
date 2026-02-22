@@ -80,9 +80,8 @@ export default function TorrentUploadPage() {
                         <p className="font-medium">How it works</p>
                         <ol className="list-inside list-decimal space-y-1 text-muted-foreground">
                             <li>Upload your .torrent file</li>
-                            <li>Select the files you want to download</li>
-                            <li>Get a quote based on the file size and health</li>
-                            <li>Pay and we&apos;ll download it to your cloud storage</li>
+                            <li>Select files and choose your storage destination</li>
+                            <li>Start the download to your cloud storage</li>
                         </ol>
                     </div>
                 </CardContent>

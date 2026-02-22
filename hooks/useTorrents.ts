@@ -3,10 +3,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { analyzeTorrentFile, getTorrentQuote, getTorrentErrorMessage } from '@/lib/api/torrents'
+import { analyzeTorrentFile, createJob, getTorrentErrorMessage } from '@/lib/api/torrents'
 import { useTorrentStore } from '@/stores/torrentStore'
-import type { TorrentInfo, QuoteResponse } from '@/types/torrents'
-import { AxiosError } from 'axios'
+import type { TorrentAnalysisResponse, JobCreationResult } from '@/types/torrents'
+import { extractApiError } from '@/lib/api/errors'
+import { jobsKeys } from './useJobs'
 
 // ============================================
 // Query Keys
@@ -15,32 +16,18 @@ import { AxiosError } from 'axios'
 export const torrentKeys = {
     all: ['torrents'] as const,
     analysis: () => [...torrentKeys.all, 'analysis'] as const,
-    quote: () => [...torrentKeys.all, 'quote'] as const,
 }
 
 // ============================================
 // Error Handler
 // ============================================
 
-interface ApiError {
-    code?: string
-    message?: string
-}
-
 function handleTorrentError(error: unknown): string {
-    if (error instanceof AxiosError && error.response?.data) {
-        const data = error.response.data as ApiError
-        if (data.code) {
-            return getTorrentErrorMessage(data.code)
-        }
-        if (data.message) {
-            return data.message
-        }
+    const extracted = extractApiError(error)
+    if (extracted.code) {
+        return getTorrentErrorMessage(extracted.code)
     }
-    if (error instanceof Error) {
-        return error.message
-    }
-    return 'An unexpected error occurred'
+    return extracted.message
 }
 
 // ============================================
@@ -56,7 +43,7 @@ export function useTorrentAnalysis() {
     const { setAnalysisResult, setTorrentFile } = useTorrentStore()
 
     return useMutation({
-        mutationFn: async (file: File): Promise<TorrentInfo> => {
+        mutationFn: async (file: File): Promise<TorrentAnalysisResponse> => {
             return analyzeTorrentFile(file)
         },
         onSuccess: (data, file) => {
@@ -75,17 +62,18 @@ export function useTorrentAnalysis() {
 }
 
 /**
- * Hook for getting torrent quotes
- * Handles file selection → quote request → redirect to invoice flow
+ * Hook for starting a download
+ * Calls createJob directly using torrentFileId from the analysis result
  */
-export function useTorrentQuote() {
+export function useStartDownload() {
     const router = useRouter()
-    const { setQuoteResult, torrentFile, selectedFilePaths, selectedStorageProfileId } = useTorrentStore()
+    const queryClient = useQueryClient()
+    const { analysisResult, selectedFilePaths, selectedStorageProfileId, clearTorrentData } = useTorrentStore()
 
     return useMutation({
-        mutationFn: async (voucherCode?: string): Promise<QuoteResponse> => {
-            if (!torrentFile) {
-                throw new Error('No torrent file available')
+        mutationFn: async (): Promise<JobCreationResult> => {
+            if (!analysisResult) {
+                throw new Error('No analysis available')
             }
             if (selectedFilePaths.length === 0) {
                 throw new Error('Please select at least one file')
@@ -93,14 +81,29 @@ export function useTorrentQuote() {
             if (!selectedStorageProfileId) {
                 throw new Error('Please select a storage profile')
             }
-            return getTorrentQuote(torrentFile, selectedFilePaths, selectedStorageProfileId, voucherCode)
+
+            // Send all files as null (download all), otherwise send selected paths
+            const filePaths = selectedFilePaths.length === analysisResult.files.length
+                ? null
+                : selectedFilePaths
+
+            return createJob(
+                analysisResult.torrentFileId,
+                filePaths,
+                selectedStorageProfileId
+            )
         },
-        onSuccess: (data) => {
-            // Store quote result for invoice page
-            setQuoteResult(data)
-            toast.success('Quote received! Redirecting to invoice...')
-            // Redirect to the invoice page
-            router.push(`/invoices/${data.invoiceId}`)
+        onSuccess: () => {
+            // Invalidate jobs query
+            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
+
+            // Clear torrent workflow data
+            clearTorrentData()
+
+            toast.success('Download started!')
+
+            // Navigate to jobs page
+            router.push('/jobs')
         },
         onError: (error) => {
             const message = handleTorrentError(error)
@@ -108,4 +111,3 @@ export function useTorrentQuote() {
         },
     })
 }
-

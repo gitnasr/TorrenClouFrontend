@@ -4,29 +4,118 @@ import {
     StorageProfileSchema,
     StorageProfileDetailSchema,
     StorageProfilesArraySchema,
-    GoogleDriveConnectResponseSchema,
+    SaveOAuthCredentialsRequestSchema,
+    SaveOAuthCredentialsResponseSchema,
+    OAuthCredentialsArraySchema,
+    ConnectGoogleDriveRequestSchema,
+    GoogleDriveAuthResponseSchema,
+    ConfigureS3RequestSchema,
 } from '@/types/storage'
 import type {
     StorageProfile,
     StorageProfileDetail,
-    GoogleDriveConnectResponse,
+    SaveOAuthCredentialsRequest,
+    SaveOAuthCredentialsResponse,
+    OAuthCredential,
+    ConnectGoogleDriveRequest,
+    GoogleDriveAuthResponse,
+    ConfigureS3Request,
 } from '@/types/storage'
 
 // Re-export types for convenience
-export type { StorageProfile, StorageProfileDetail, GoogleDriveConnectResponse }
+export type { StorageProfile, StorageProfileDetail, SaveOAuthCredentialsRequest, SaveOAuthCredentialsResponse, OAuthCredential, ConnectGoogleDriveRequest, GoogleDriveAuthResponse, ConfigureS3Request }
 export { getStorageErrorMessage, storageErrorMessages } from '@/types/storage'
 
 /**
- * Get Google OAuth authorization URL
- * @param profileName Optional custom name for this storage connection (3-50 characters)
+ * Save reusable OAuth app credentials (upserts by ClientId)
+ * POST /api/storage/gdrive/credentials
+ *
+ * Saves credentials once — can be referenced by multiple /connect calls.
  */
-export async function getGoogleDriveAuthUrl(profileName?: string): Promise<GoogleDriveConnectResponse> {
-    const url = profileName
-        ? `/storage/gdrive/connect?profileName=${encodeURIComponent(profileName)}`
-        : '/storage/gdrive/connect'
+export async function saveOAuthCredentials(
+    data: SaveOAuthCredentialsRequest
+): Promise<SaveOAuthCredentialsResponse> {
+    const validatedData = SaveOAuthCredentialsRequestSchema.parse(data)
+    const response = await apiClient.post<SaveOAuthCredentialsResponse>(
+        '/storage/gdrive/credentials',
+        validatedData
+    )
+    return SaveOAuthCredentialsResponseSchema.parse(response.data)
+}
 
-    const response = await apiClient.get<GoogleDriveConnectResponse>(url)
-    return GoogleDriveConnectResponseSchema.parse(response.data)
+/**
+ * List all saved OAuth app credentials for the current user
+ * GET /api/storage/gdrive/credentials
+ *
+ * ClientSecret is never returned. ClientId is masked.
+ */
+export async function getOAuthCredentials(): Promise<OAuthCredential[]> {
+    const response = await apiClient.get<OAuthCredential[]>(
+        '/storage/gdrive/credentials'
+    )
+    return OAuthCredentialsArraySchema.parse(response.data)
+}
+
+/**
+ * Connect a new Google Drive account using a saved credential
+ * POST /api/storage/gdrive/connect
+ *
+ * Creates a new storage profile AND starts the OAuth flow in one step.
+ * @returns Authorization URL to redirect the user to Google consent screen
+ */
+export async function connectGoogleDrive(
+    data: ConnectGoogleDriveRequest
+): Promise<GoogleDriveAuthResponse> {
+    const validatedData = ConnectGoogleDriveRequestSchema.parse(data)
+    const response = await apiClient.post<GoogleDriveAuthResponse>(
+        '/storage/gdrive/connect',
+        validatedData
+    )
+    return GoogleDriveAuthResponseSchema.parse(response.data)
+}
+
+/**
+ * Re-authenticate a Google Drive profile when refresh token has expired
+ * POST /api/storage/gdrive/{profileId}/reauthenticate
+ *
+ * Same flow as authenticate — no need to re-enter credentials.
+ */
+export async function reauthenticateGoogleDrive(
+    profileId: number
+): Promise<GoogleDriveAuthResponse> {
+    const response = await apiClient.post<GoogleDriveAuthResponse>(
+        `/storage/gdrive/${profileId}/reauthenticate`
+    )
+    return GoogleDriveAuthResponseSchema.parse(response.data)
+}
+
+/**
+ * Storage profile result from S3 configuration
+ */
+interface S3ConfigureResult {
+    success: boolean
+    storageProfileId: number
+    message: string
+}
+
+/**
+ * Configure S3-compatible storage with user-provided credentials
+ * POST /api/storage/configure-s3
+ *
+ * Supports AWS S3, Backblaze B2, Cloudflare R2, and other S3-compatible providers
+ *
+ * @param config - S3 credentials and bucket configuration
+ * @returns Storage profile ID on success
+ */
+export async function configureS3(config: ConfigureS3Request): Promise<S3ConfigureResult> {
+    // Validate request before sending
+    const validatedConfig = ConfigureS3RequestSchema.parse(config)
+
+    const response = await apiClient.post<S3ConfigureResult>(
+        '/storage/s3/configure',
+        validatedConfig
+    )
+    return response.data
 }
 
 /**
@@ -60,92 +149,86 @@ export async function disconnectStorageProfile(id: number): Promise<void> {
 }
 
 /**
- * Opens Google OAuth in a popup window
- * Backend will redirect to /storage?success=true&profileId=123 or /storage?error=...&message=...
- * The popup detects this redirect and closes itself
- * @param profileName Optional custom name for this storage connection
+ * Opens Google OAuth authorization URL in a popup window.
+ * Polls for the redirect back to /storage with success/error params.
+ * Reusable for both authenticate and reauthenticate flows.
+ *
+ * @param authorizationUrl - The Google OAuth consent URL
  * @returns Promise that resolves with the profile ID on success
  */
-export function connectGoogleDriveWithPopup(profileName?: string): Promise<number> {
-    return new Promise(async (resolve, reject) => {
-        try {
-            // Get authorization URL with optional profile name
-            const { authorizationUrl } = await getGoogleDriveAuthUrl(profileName)
+export function openGoogleDriveAuthPopup(authorizationUrl: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+        // Open popup window
+        const width = 500
+        const height = 600
+        const left = window.screenX + (window.outerWidth - width) / 2
+        const top = window.screenY + (window.outerHeight - height) / 2
 
-            // Open popup window
-            const width = 500
-            const height = 600
-            const left = window.screenX + (window.outerWidth - width) / 2
-            const top = window.screenY + (window.outerHeight - height) / 2
+        const popup = window.open(
+            authorizationUrl,
+            'Google Drive Authorization',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        )
 
-            const popup = window.open(
-                authorizationUrl,
-                'Google Drive Authorization',
-                `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
-            )
-
-            if (!popup) {
-                reject(new Error('POPUP_BLOCKED'))
-                return
-            }
-
-            // Poll for popup to close (user cancelled)
-            const pollTimer = setInterval(() => {
-                if (popup.closed) {
-                    clearInterval(pollTimer)
-                    clearInterval(checkCallback)
-                    reject(new Error('AUTHORIZATION_CANCELLED'))
-                }
-            }, 1000)
-
-            // Poll for redirect to /storage page
-            const checkCallback = setInterval(() => {
-                try {
-                    // Check if popup is on our /storage page (after backend redirect)
-                    const popupUrl = popup.location.href
-
-                    // Check if we've been redirected back to the storage page
-                    if (popupUrl.includes('/storage') && !popupUrl.includes('google') && !popupUrl.includes('accounts.google.com')) {
-                        clearInterval(checkCallback)
-                        clearInterval(pollTimer)
-
-                        // Extract query params
-                        const url = new URL(popupUrl)
-                        const success = url.searchParams.get('success')
-                        const profileId = url.searchParams.get('profileId')
-                        const error = url.searchParams.get('error')
-                        const message = url.searchParams.get('message')
-
-                        // Close popup
-                        popup.close()
-
-                        if (success === 'true' && profileId) {
-                            resolve(parseInt(profileId, 10))
-                        } else if (error) {
-                            reject(new Error(error))
-                        } else if (message) {
-                            reject(new Error(message))
-                        } else {
-                            reject(new Error('Unknown error during OAuth'))
-                        }
-                    }
-                } catch {
-                    // Cross-origin error - popup is still on Google's domain
-                    // This is expected, continue polling
-                }
-            }, 500)
-
-            // Timeout after 5 minutes
-            setTimeout(() => {
-                if (!popup.closed) {
-                    popup.close()
-                }
-                clearInterval(checkCallback)
-                clearInterval(pollTimer)
-                reject(new Error('AUTHORIZATION_TIMEOUT'))
-            }, 5 * 60 * 1000)
-        } catch (error) {
-            reject(error)
+        if (!popup) {
+            reject(new Error('POPUP_BLOCKED'))
+            return
         }
+
+        // Poll for popup to close (user cancelled)
+        const pollTimer = setInterval(() => {
+            if (popup.closed) {
+                clearInterval(pollTimer)
+                clearInterval(checkCallback)
+                reject(new Error('AUTHORIZATION_CANCELLED'))
+            }
+        }, 1000)
+
+        // Poll for redirect to /storage page
+        const checkCallback = setInterval(() => {
+            try {
+                const popupUrl = popup.location.href
+
+                if (popupUrl.includes('/storage') && !popupUrl.includes('google') && !popupUrl.includes('accounts.google.com')) {
+                    clearInterval(checkCallback)
+                    clearInterval(pollTimer)
+
+                    const url = new URL(popupUrl)
+                    const success = url.searchParams.get('success')
+                    const profileId = url.searchParams.get('profileId')
+                    const error = url.searchParams.get('error')
+                    const message = url.searchParams.get('message')
+
+                    popup.close()
+
+                    if (success === 'true' && profileId) {
+                        const id = parseInt(profileId, 10)
+                        if (Number.isInteger(id) && id > 0) {
+                            resolve(id)
+                        } else {
+                            reject(new Error(`Invalid profile ID returned from OAuth callback: "${profileId}"`))
+                        }
+                    } else if (error) {
+                        reject(new Error(error))
+                    } else if (message) {
+                        reject(new Error(message))
+                    } else {
+                        reject(new Error('Unknown error during OAuth'))
+                    }
+                }
+            } catch {
+                // Cross-origin error - popup is still on Google's domain
+            }
+        }, 500)
+
+        // Timeout after 5 minutes
+        setTimeout(() => {
+            if (!popup.closed) {
+                popup.close()
+            }
+            clearInterval(checkCallback)
+            clearInterval(pollTimer)
+            reject(new Error('AUTHORIZATION_TIMEOUT'))
+        }, 5 * 60 * 1000)
     })
 }

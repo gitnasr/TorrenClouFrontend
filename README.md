@@ -6,7 +6,6 @@ A modern, high-performance SaaS frontend for a Torrent-to-Cloud service built wi
 
 - 🚀 **Next.js 15** with App Router
 - 🔐 **NextAuth.js v5** with Google OAuth integration
-- 💳 **Wallet System** with dynamic pricing
 - 📊 **Real-time Updates** with TanStack Query
 - 🎨 **Dark Mode** first design with Shadcn/UI
 - 📱 **Fully Responsive** mobile-first design
@@ -69,8 +68,8 @@ npm run dev
 ├── app/
 │   ├── api/auth/[...nextauth]/  # NextAuth API routes
 │   ├── dashboard/                # Protected dashboard pages
-│   │   ├── files/               # My Files page
-│   │   ├── wallet/              # Wallet page
+│   │   ├── jobs/                # Jobs page
+│   │   ├── storage/             # Storage profiles page
 │   │   └── settings/            # Settings page
 │   ├── globals.css              # Global styles
 │   ├── layout.tsx               # Root layout
@@ -105,13 +104,13 @@ npm run dev
 The frontend expects the following backend endpoints:
 
 - `POST /api/auth/google-login` - Google OAuth login
-- `GET /api/wallet/balance` - Get wallet balance
-- `GET /api/wallet/transactions` - Get transaction history
-- `POST /api/torrents/quote` - Get price quote for magnet link
-- `POST /api/torrents/start` - Start a torrent download
-- `GET /api/torrents/jobs` - Get all torrent jobs
-- `DELETE /api/torrents/jobs/:id` - Delete a job
-- `POST /api/torrents/jobs/:id/retry` - Retry a failed job
+- `POST /api/torrents/analyze` - Analyze torrent for job creation
+- `POST /api/torrents/create-job` - Create a download job
+- `GET /api/jobs` - Get all jobs
+- `POST /api/jobs/:id/retry` - Retry a failed job
+- `POST /api/jobs/:id/cancel` - Cancel a job
+- `GET /api/storage/profiles` - Get storage profiles
+- `POST /api/storage/gdrive/configure` - Configure Google Drive with OAuth credentials
 
 ## Features Overview
 
@@ -121,9 +120,9 @@ The frontend expects the following backend endpoints:
 - Google OAuth login integration
 
 ### Dashboard
-- **Home:** Magnet link input with quote system and pricing display
-- **My Files:** Data table showing active jobs with progress tracking
-- **Wallet:** Balance display, top-up section, and transaction history
+- **Home:** Torrent upload and file selection for cloud transfer
+- **Jobs:** Data table showing active jobs with progress tracking
+- **Storage:** Manage cloud storage profiles (Google Drive, S3)
 - **Settings:** Account settings (placeholder)
 
 ### Layout

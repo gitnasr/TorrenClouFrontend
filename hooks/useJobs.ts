@@ -3,7 +3,6 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { AxiosError } from 'axios'
 import {
     getJobs,
     getJob,
@@ -11,15 +10,11 @@ import {
     getJobTimeline,
     retryJob,
     cancelJob,
-    refundJob,
-    adminRetryJob,
-    adminCancelJob,
 } from '@/lib/api/jobs'
 import { useJobsStore } from '@/stores/jobsStore'
-import type { JobsQueryParams, PaginatedJobs, Job, JobStatistics, JobTimelineEntry } from '@/types/jobs'
-import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, jobTimelineEntrySchema, getJobsErrorMessage } from '@/types/jobs'
-import { z } from 'zod'
-import { walletKeys } from './useWallet'
+import type { JobsQueryParams, JobTimelineQueryParams } from '@/types/jobs'
+import { paginatedJobsSchema, jobSchema, jobStatisticsSchema, paginatedJobTimelineSchema, getJobsErrorMessage } from '@/types/jobs'
+import { extractApiError } from '@/lib/api/errors'
 
 // ============================================
 // Query Keys
@@ -33,7 +28,7 @@ export const jobsKeys = {
     detail: (id: number) => [...jobsKeys.details(), id] as const,
     statistics: () => [...jobsKeys.all, 'statistics'] as const,
     timelines: () => [...jobsKeys.all, 'timeline'] as const,
-    timeline: (id: number) => [...jobsKeys.timelines(), id] as const,
+    timeline: (id: number, params?: JobTimelineQueryParams) => [...jobsKeys.timelines(), id, params] as const,
 }
 
 // ============================================
@@ -43,18 +38,27 @@ export const jobsKeys = {
 /**
  * Hook to fetch paginated jobs list
  * Enhanced with refetch on focus, reconnect, and polling for active jobs
+ *
+ * @param params - Optional overrides for pageSize and status; when provided they
+ *   take precedence over the Zustand store values so callers like DashboardPage
+ *   can fetch with their own params without mutating shared store state.
  */
-export function useJobs() {
+export function useJobs(params?: Pick<JobsQueryParams, 'pageSize' | 'status'>) {
     const { status } = useSession()
-    const { currentPage, pageSize, selectedStatus } = useJobsStore()
+    const { currentPage, pageSize: storePageSize, selectedStatus } = useJobsStore()
+
+    // Explicit overrides win over store values; use 'in' check so null is honoured.
+    const pageSize = params?.pageSize ?? storePageSize
+    const effectiveStatus =
+        params !== undefined && 'status' in params ? (params.status ?? null) : selectedStatus
 
     return useQuery({
-        queryKey: jobsKeys.list({ pageNumber: currentPage, pageSize, status: selectedStatus }),
+        queryKey: jobsKeys.list({ pageNumber: currentPage, pageSize, status: effectiveStatus }),
         queryFn: async () => {
             const data = await getJobs({
                 pageNumber: currentPage,
                 pageSize,
-                status: selectedStatus,
+                status: effectiveStatus,
             })
             // Validate with Zod
             return paginatedJobsSchema.parse(data)
@@ -131,24 +135,24 @@ export function useJobStatistics() {
 }
 
 /**
- * Hook to fetch job timeline
+ * Hook to fetch job timeline with pagination
  * Enhanced with refetch on focus, reconnect, and polling for active jobs
  */
-export function useJobTimeline(jobId: number | null) {
+export function useJobTimeline(jobId: number | null, pageNumber: number = 1, pageSize: number = 10) {
     const { status } = useSession()
     
     // Get job data to check if it's active
     const { data: jobData } = useJob(jobId)
 
     return useQuery({
-        queryKey: jobsKeys.timeline(jobId ?? 0),
+        queryKey: jobsKeys.timeline(jobId ?? 0, { pageNumber, pageSize }),
         queryFn: async () => {
             if (!jobId) {
                 throw new Error('Invalid job ID')
             }
-            const data = await getJobTimeline(jobId)
+            const data = await getJobTimeline(jobId, { pageNumber, pageSize })
             // Validate with Zod
-            return z.array(jobTimelineEntrySchema).parse(data)
+            return paginatedJobTimelineSchema.parse(data)
         },
         enabled: status === 'authenticated' && !!jobId,
         staleTime: 5 * 1000, // 5 seconds - timeline updates when job status changes
@@ -156,7 +160,7 @@ export function useJobTimeline(jobId: number | null) {
         refetchOnMount: true,
         refetchOnReconnect: true,
         // Poll every 10 seconds only if job is active
-        refetchInterval: (query) => {
+        refetchInterval: () => {
             if (!jobData) return false
             const isActive = ['QUEUED', 'DOWNLOADING', 'PENDING_UPLOAD', 'UPLOADING', 'TORRENT_DOWNLOAD_RETRY', 'UPLOAD_RETRY'].includes(jobData.status)
             return isActive ? 10 * 1000 : false
@@ -193,28 +197,12 @@ export function usePrefetchNextPage() {
 // Error Handler
 // ============================================
 
-interface ApiErrorResponse {
-    isSuccess: boolean
-    error?: {
-        code: string
-        message: string
-    }
-}
-
 function handleJobActionError(error: unknown): string {
-    if (error instanceof AxiosError && error.response?.data) {
-        const data = error.response.data as ApiErrorResponse
-        if (data.error?.code) {
-            return getJobsErrorMessage(data.error.code, data.error.message)
-        }
-        if (data.error?.message) {
-            return data.error.message
-        }
+    const extracted = extractApiError(error)
+    if (extracted.code) {
+        return getJobsErrorMessage(extracted.code, extracted.message)
     }
-    if (error instanceof Error) {
-        return error.message
-    }
-    return 'An unexpected error occurred'
+    return extracted.message
 }
 
 // ============================================
@@ -222,14 +210,14 @@ function handleJobActionError(error: unknown): string {
 // ============================================
 
 /**
- * Hook for retrying a failed job (user endpoint)
+ * Hook for retrying a failed job
  */
 export function useRetryJob() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: retryJob,
-        onSuccess: (_data, jobId) => {
+        onSuccess: () => {
             // Invalidate job queries to refresh data
             queryClient.invalidateQueries({ queryKey: jobsKeys.all })
             toast.success('Job retry initiated successfully')
@@ -242,19 +230,17 @@ export function useRetryJob() {
 }
 
 /**
- * Hook for cancelling an active job (user endpoint)
+ * Hook for cancelling an active job
  */
 export function useCancelJob() {
     const queryClient = useQueryClient()
 
     return useMutation({
         mutationFn: cancelJob,
-        onSuccess: (_data, jobId) => {
+        onSuccess: () => {
             // Invalidate job queries to refresh data
             queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            // Also invalidate wallet balance as refund may have been processed
-            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
-            toast.success('Job cancelled successfully. Refund processed automatically.')
+            toast.success('Job cancelled successfully')
         },
         onError: (error) => {
             const message = handleJobActionError(error)
@@ -262,66 +248,3 @@ export function useCancelJob() {
         },
     })
 }
-
-/**
- * Hook for requesting a refund for a failed job (user endpoint)
- */
-export function useRefundJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: refundJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            // Also invalidate wallet balance as refund has been added
-            queryClient.invalidateQueries({ queryKey: walletKeys.balance() })
-            toast.success('Refund processed successfully')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to process refund', { description: message })
-        },
-    })
-}
-
-/**
- * Hook for retrying any user's failed job (admin endpoint)
- */
-export function useAdminRetryJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: adminRetryJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            toast.success('Job retry initiated successfully (Admin)')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to retry job', { description: message })
-        },
-    })
-}
-
-/**
- * Hook for cancelling any user's active job (admin endpoint)
- */
-export function useAdminCancelJob() {
-    const queryClient = useQueryClient()
-
-    return useMutation({
-        mutationFn: adminCancelJob,
-        onSuccess: (_data, jobId) => {
-            // Invalidate job queries to refresh data
-            queryClient.invalidateQueries({ queryKey: jobsKeys.all })
-            toast.success('Job cancelled successfully (Admin)')
-        },
-        onError: (error) => {
-            const message = handleJobActionError(error)
-            toast.error('Failed to cancel job', { description: message })
-        },
-    })
-}
-

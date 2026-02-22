@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { getSession } from 'next-auth/react'
+import { getSession, signOut } from 'next-auth/react'
 
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
@@ -25,10 +25,17 @@ apiClient.interceptors.request.use(
 // Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized - could redirect to login
-      window.location.href = '/'
+      try {
+        await signOut({ redirect: false })
+      } finally {
+        // Always redirect to login even if signOut rejects.
+        // Guard against SSR environments where window is absent.
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+      }
     }
     return Promise.reject(error)
   }

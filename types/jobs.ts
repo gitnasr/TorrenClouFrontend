@@ -56,7 +56,7 @@ export const jobStatusSchema = z.preprocess(
     z.enum(validStatusStrings)
 )
 
-export const jobTypeSchema = z.enum(['Torrent', 'Sync'])
+export const jobTypeSchema = z.enum(['Torrent'])
 
 export const jobSchema = z.object({
     id: z.number().int().positive(),
@@ -68,22 +68,18 @@ export const jobSchema = z.object({
     requestFileName: z.string().nullable(),
     errorMessage: z.string().nullable(),
     currentState: z.string().nullable(),
-    // Admin-only: Last heartbeat from worker processing the job
-    lastHeartbeat: z.string().datetime().nullable().optional(),
     bytesDownloaded: z.number().int().nonnegative(),
     totalBytes: z.number().int().nonnegative(),
-    selectedFilePaths: z.array(z.string()),
+    selectedFilePaths: z.array(z.string()).nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime().nullable().optional(),
     startedAt: z.string().datetime().nullable().optional(),
     completedAt: z.string().datetime().nullable().optional(),
-    progressPercentage: z.number().min(0).max(100),
+    progressPercentage: z.number().transform((val) => Math.min(100, Math.max(0, val))),
     isActive: z.boolean(),
-    // Refund and action state properties
-    isRefunded: z.boolean().optional().default(false),
+    // Action state properties
     canRetry: z.boolean().optional().default(false),
     canCancel: z.boolean().optional().default(false),
-    canRefund: z.boolean().optional().default(false),
 })
 
 export const paginatedJobsSchema = z.object({
@@ -170,6 +166,16 @@ export const jobTimelineEntrySchema = z.object({
     durationFromPrevious: z.string().nullable(), // ISO 8601 duration format
 })
 
+export const paginatedJobTimelineSchema = z.object({
+    items: z.array(jobTimelineEntrySchema),
+    totalCount: z.number().int().nonnegative(),
+    pageNumber: z.number().int().positive(),
+    pageSize: z.number().int().positive(),
+    totalPages: z.number().int().nonnegative(),
+    hasPreviousPage: z.boolean(),
+    hasNextPage: z.boolean(),
+})
+
 // ============================================
 // Inferred Types from Schemas
 // ============================================
@@ -178,12 +184,18 @@ export type Job = z.infer<typeof jobSchema>
 export type PaginatedJobs = z.infer<typeof paginatedJobsSchema>
 export type JobStatistics = z.infer<typeof jobStatisticsSchema>
 export type JobTimelineEntry = z.infer<typeof jobTimelineEntrySchema>
+export type PaginatedJobTimeline = z.infer<typeof paginatedJobTimelineSchema>
 
 // Manual type for query params (avoiding Zod default inference issues)
 export interface JobsQueryParams {
     pageNumber?: number
     pageSize?: number
     status?: 'QUEUED' | 'DOWNLOADING' | 'PENDING_UPLOAD' | 'UPLOADING' | 'TORRENT_DOWNLOAD_RETRY' | 'UPLOAD_RETRY' | 'COMPLETED' | 'FAILED' | 'CANCELLED' | 'TORRENT_FAILED' | 'UPLOAD_FAILED' | 'GOOGLE_DRIVE_FAILED' | null
+}
+
+export interface JobTimelineQueryParams {
+    pageNumber?: number
+    pageSize?: number
 }
 
 // ============================================
@@ -245,29 +257,21 @@ export const statusLabels: Record<JobStatus, string> = {
 // ============================================
 
 export const jobsErrorMessages: Record<string, string> = {
-    // General errors
-    'NOT_FOUND': 'Job not found.',
-    'JOB_NOT_FOUND': 'Job not found.',
-    'UNAUTHORIZED': 'You are not authorized to perform this action.',
-    'FETCH_ERROR': 'Failed to fetch jobs. Please try again.',
-    
+    // General errors (PascalCase - matching backend v2 format)
+    'NotFound': 'Job not found.',
+    'JobNotFound': 'Job not found.',
+    'Unauthorized': 'You are not authorized to perform this action.',
+    'FetchError': 'Failed to fetch jobs. Please try again.',
+
     // Retry errors
-    'JOB_COMPLETED': 'Cannot retry a completed job.',
-    'JOB_CANCELLED': 'Cannot retry a cancelled job.',
-    'JOB_REFUNDED': 'Cannot retry a refunded job.',
-    'JOB_ACTIVE': 'Job is currently active. Wait for it to complete or fail before retrying.',
-    'STORAGE_INACTIVE': 'The storage profile for this job is no longer active.',
-    
+    'JobCompleted': 'Cannot retry a completed job.',
+    'JobCancelled': 'Cannot retry a cancelled job.',
+    'JobActive': 'Job is currently active. Wait for it to complete or fail before retrying.',
+    'StorageInactive': 'The storage profile for this job is no longer active.',
+
     // Cancel errors
-    'JOB_ALREADY_CANCELLED': 'This job has already been cancelled.',
-    'JOB_NOT_CANCELLABLE': 'This job cannot be cancelled in its current state.',
-    
-    // Refund errors
-    'JOB_NOT_FAILED': 'Only failed jobs can be refunded.',
-    'JOB_ALREADY_REFUNDED': 'This job has already been refunded.',
-    'INVOICE_NOT_FOUND': 'Invoice not found for this job.',
-    'INVOICE_NOT_PAID': 'Cannot refund an unpaid invoice.',
-    'INVOICE_ALREADY_REFUNDED': 'This invoice has already been refunded.',
+    'JobAlreadyCancelled': 'This job has already been cancelled.',
+    'JobNotCancellable': 'This job cannot be cancelled in its current state.',
 }
 
 export function getJobsErrorMessage(code: string, fallback?: string): string {

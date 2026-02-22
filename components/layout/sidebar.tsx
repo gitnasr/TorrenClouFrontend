@@ -7,14 +7,57 @@ import {
   LayoutDashboard,
   Upload,
   FolderOpen,
-  Wallet,
   HardDrive,
   FileText,
-  Settings,
   ChevronDown,
   ChevronRight,
 } from 'lucide-react'
 import { useState } from 'react'
+import { useHealth } from '@/hooks/useHealth'
+import type { HealthStatus } from '@/lib/api/health'
+
+function HealthWidget() {
+  const { data, isLoading } = useHealth()
+
+  const status: HealthStatus = isLoading ? 'loading' : data?.status ?? 'down'
+
+  const dotClass: Record<HealthStatus | 'loading', string> = {
+    loading:      'bg-muted-foreground animate-pulse',
+    operational:  'bg-success',
+    degraded:     'bg-warning animate-pulse-slow',
+    down:         'bg-danger',
+  }
+
+  const label: Record<HealthStatus | 'loading', string> = {
+    loading:     'Checking...',
+    operational: 'All Systems OK',
+    degraded:    'Degraded',
+    down:        'Service Down',
+  }
+
+  const ready = data?.data
+
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg">
+      <span className={cn('h-2 w-2 rounded-full shrink-0', dotClass[status])} />
+      <div className="min-w-0 flex-1">
+        <p className={cn(
+          'text-xs font-medium truncate',
+          status === 'operational' ? 'text-foreground' : 'text-muted-foreground'
+        )}>
+          {label[status]}
+        </p>
+        {ready && (
+          <p className="text-[10px] text-muted-foreground font-mono truncate mt-0.5">
+            v{ready.version}
+            {ready.databaseResponseTimeMs !== null && ` · DB ${ready.databaseResponseTimeMs}ms`}
+            {ready.redisResponseTimeMs !== null && ` · Redis ${ready.redisResponseTimeMs}ms`}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
 
 interface NavItem {
   name: string
@@ -34,23 +77,12 @@ const navigation: NavItem[] = [
     ],
   },
   { name: 'Jobs', href: '/jobs', icon: FolderOpen },
-  {
-    name: 'Wallet',
-    href: '/wallet',
-    icon: Wallet,
-    children: [
-      { name: 'Overview', href: '/wallet' },
-      { name: 'Transactions', href: '/wallet/transactions' },
-      { name: 'Deposits', href: '/wallet/deposits' },
-    ],
-  },
   { name: 'Storage', href: '/storage', icon: HardDrive },
-  { name: 'Invoices', href: '/invoices', icon: FileText },
 ]
 
 export function Sidebar() {
   const pathname = usePathname()
-  const [expandedItems, setExpandedItems] = useState<string[]>(['Torrents', 'Wallet'])
+  const [expandedItems, setExpandedItems] = useState<string[]>(['Torrents'])
 
   const toggleExpand = (name: string) => {
     setExpandedItems((prev) =>
@@ -75,7 +107,7 @@ export function Sidebar() {
         </div>
         <span className="ml-3 text-lg font-semibold">TorreClou</span>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4 pb-0">
         {navigation.map((item) => {
           const hasChildren = item.children && item.children.length > 0
           const isExpanded = expandedItems.includes(item.name)
@@ -141,7 +173,11 @@ export function Sidebar() {
           )
         })}
       </nav>
+
+      {/* Health status */}
+      <div className="border-t border-border p-2">
+        <HealthWidget />
+      </div>
     </div>
   )
 }
-
