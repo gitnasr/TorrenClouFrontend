@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { signIn } from 'next-auth/react'
+import { useState, useEffect } from 'react'
+import { signIn, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2, CloudDownload, Check, Mail, Lock, Code } from 'lucide-react'
@@ -28,9 +28,22 @@ const features = [
 
 export default function LandingPage() {
   const router = useRouter()
+  const { status } = useSession()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  // Redirect already-authenticated users away from the login page
+  useEffect(() => {
+    if (status === 'authenticated') {
+      router.replace('/dashboard')
+    }
+  }, [status, router])
+
+  // Show nothing while the session is resolving or redirecting to avoid flicker
+  if (status === 'loading' || status === 'authenticated') {
+    return null
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

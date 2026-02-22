@@ -100,29 +100,30 @@ export function StorageProfileCard({ profile, className }: StorageProfileCardPro
                 )}
 
                 <div className="mt-4 pt-4 border-t flex items-center justify-between">
-                    {needsReauth ? (
-                        <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-danger hover:bg-danger/90 text-danger-foreground"
-                            onClick={handleReauthenticate}
-                            disabled={isActionPending}
-                        >
-                            {reauthenticateMutation.isPending ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : (
-                                <ExternalLink className="mr-2 h-4 w-4" />
-                            )}
-                            Reconnect
-                        </Button>
-                    ) : (
+                    <div className="flex items-center gap-2">
                         <Button variant="ghost" size="sm" asChild>
                             <Link href={`/storage/${profile.id}`}>
                                 <Settings className="mr-2 h-4 w-4" />
                                 Manage
                             </Link>
                         </Button>
-                    )}
+                        {needsReauth && (
+                            <Button
+                                variant="default"
+                                size="sm"
+                                className="bg-danger hover:bg-danger/90 text-danger-foreground"
+                                onClick={handleReauthenticate}
+                                disabled={isActionPending}
+                            >
+                                {reauthenticateMutation.isPending ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                ) : (
+                                    <ExternalLink className="mr-2 h-4 w-4" />
+                                )}
+                                Reconnect
+                            </Button>
+                        )}
+                    </div>
                     {!profile.isDefault && !needsReauth && (
                         <Button
                             variant="ghost"

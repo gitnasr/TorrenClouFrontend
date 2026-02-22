@@ -25,7 +25,8 @@ export interface ReadinessResult {
 
 /**
  * Fetch /api/health/ready
- * Server-side cached for 10 seconds — safe to poll every 30s.
+ * The request is sent with cache: 'no-store' so every call hits the server.
+ * Client-side caching and polling frequency (staleTime) is managed by useHealth.
  */
 export async function getReadiness(): Promise<ReadinessResult> {
     try {

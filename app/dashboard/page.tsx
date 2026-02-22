@@ -6,11 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Upload, FolderOpen, HardDrive, Loader2, TrendingUp, CheckCircle, XCircle, Clock } from 'lucide-react'
 import Link from 'next/link'
 import { useJobs, useJobStatistics } from '@/hooks/useJobs'
-import { useJobsStore } from '@/stores/jobsStore'
 import type { UserJob } from '@/types/api'
 import type { Job } from '@/types/jobs'
 import { JobStatus } from '@/types/enums'
-import { useEffect } from 'react'
 
 // Adapter function to convert Job to UserJob format for JobCard
 function toUserJob(job: Job): UserJob {
@@ -34,23 +32,14 @@ function toUserJob(job: Job): UserJob {
 }
 
 export default function DashboardPage() {
-  // Set page size to 5 for dashboard
-  const { setPageSize, setSelectedStatus } = useJobsStore()
-
-  useEffect(() => {
-    // Reset to show all statuses and limit to 5
-    setSelectedStatus(null)
-    setPageSize(5)
-  }, [setPageSize, setSelectedStatus])
-
-  // Fetch recent jobs
-  const { data: jobsData, isLoading: jobsLoading } = useJobs()
+  // Fetch recent jobs using local params — does NOT mutate the shared jobs store
+  const { data: jobsData, isLoading: jobsLoading } = useJobs({ pageSize: 5, status: null })
 
   // Fetch job statistics from dedicated endpoint
   const { data: jobStats, isLoading: statsLoading } = useJobStatistics()
 
   // Get recent jobs
-  const recentJobs = jobsData?.items.slice(0, 5) ?? []
+  const recentJobs = jobsData?.items ?? []
 
   return (
     <div className="space-y-6">

@@ -90,7 +90,7 @@ export function useSaveOAuthCredentials() {
     const queryClient = useQueryClient()
     const {
         setConnecting,
-        setConnectionError,
+        setCredentialSaveError,
         setCredentialsFormOpen,
     } = useStorageProfilesStore()
 
@@ -99,11 +99,12 @@ export function useSaveOAuthCredentials() {
 
         onMutate: () => {
             setConnecting(true)
-            setConnectionError(null)
+            setCredentialSaveError(null)
         },
 
         onSuccess: (result) => {
             setConnecting(false)
+            setCredentialSaveError(null)
             setCredentialsFormOpen(false)
             queryClient.invalidateQueries({ queryKey: storageProfileKeys.credentials() })
             toast.success('Credentials saved', {
@@ -117,7 +118,8 @@ export function useSaveOAuthCredentials() {
             const errorMessage = extracted.code
                 ? getStorageErrorMessage(extracted.code, extracted.message)
                 : extracted.message
-            setConnectionError(errorMessage)
+            // Use dedicated field so the error only surfaces in OAuthCredentialsForm
+            setCredentialSaveError(errorMessage)
             toast.error('Failed to save credentials', { description: errorMessage })
         },
     })

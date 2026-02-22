@@ -12,7 +12,7 @@ import {
 } from '@/types/storage'
 import {
     useStorageProfilesStore,
-    selectConnectionError,
+    selectCredentialSaveError,
     selectIsCredentialsFormOpen,
 } from '@/stores/storageProfilesStore'
 
@@ -32,9 +32,9 @@ interface OAuthCredentialsFormProps {
 
 export function OAuthCredentialsForm({ className }: OAuthCredentialsFormProps) {
     const saveCredentials = useSaveOAuthCredentials()
-    const connectionError = useStorageProfilesStore(selectConnectionError)
+    const credentialSaveError = useStorageProfilesStore(selectCredentialSaveError)
     const isFormOpen = useStorageProfilesStore(selectIsCredentialsFormOpen)
-    const { setCredentialsFormOpen, setConnectionError } = useStorageProfilesStore()
+    const { setCredentialsFormOpen, setCredentialSaveError } = useStorageProfilesStore()
 
     // Auto-generate redirect URI based on backend URL
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
@@ -65,7 +65,7 @@ export function OAuthCredentialsForm({ className }: OAuthCredentialsFormProps) {
 
     const toggleForm = () => {
         setCredentialsFormOpen(!isFormOpen)
-        setConnectionError(null)
+        setCredentialSaveError(null)
     }
 
     return (
@@ -173,11 +173,11 @@ export function OAuthCredentialsForm({ className }: OAuthCredentialsFormProps) {
                         </p>
                     </div>
 
-                    {/* Connection Error */}
-                    {connectionError && (
+                    {/* Credential Save Error */}
+                    {credentialSaveError && (
                         <div className="flex gap-3 rounded-lg border border-danger/30 bg-danger/10 p-3">
                             <AlertCircle className="h-4 w-4 text-danger shrink-0 mt-0.5" />
-                            <div className="text-sm text-danger">{connectionError}</div>
+                            <div className="text-sm text-danger">{credentialSaveError}</div>
                         </div>
                     )}
 

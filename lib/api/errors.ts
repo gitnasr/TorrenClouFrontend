@@ -58,7 +58,9 @@ export function extractApiError(error: unknown): ExtractedError {
 
     if (error instanceof Error) {
         return {
-            code: error.message,
+            // Use name (e.g. "TypeError", "POPUP_BLOCKED") so callers can pattern-match on code
+            // while message retains the human-readable description.
+            code: error.name || 'UNKNOWN_ERROR',
             message: error.message,
         }
     }

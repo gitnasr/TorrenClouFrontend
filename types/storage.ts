@@ -100,7 +100,7 @@ export const ConfigureS3RequestSchema = z.object({
     s3SecretKey: z.string()
         .min(1, 'Secret Key is required'),
     s3BucketName: z.string()
-        .min(1, 'Bucket Name is required')
+        .min(3, 'Bucket Name is required and must be at least 3 characters')
         .max(63, 'Bucket name must be at most 63 characters')
         .regex(
             /^[a-z0-9][a-z0-9.-]*[a-z0-9]$/,

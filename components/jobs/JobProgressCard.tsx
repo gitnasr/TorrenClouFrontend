@@ -14,7 +14,9 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
     const status = job.status as JobStatus
 
     const isDownloading = [JobStatus.DOWNLOADING, JobStatus.TORRENT_DOWNLOAD_RETRY].includes(status)
-    const isUploading = [JobStatus.UPLOADING, JobStatus.UPLOAD_RETRY, JobStatus.GOOGLE_DRIVE_FAILED].includes(status)
+    // GOOGLE_DRIVE_FAILED is its own terminal error state — not an active upload
+    const isUploading = [JobStatus.UPLOADING, JobStatus.UPLOAD_RETRY].includes(status)
+    const isUploadFailed = status === JobStatus.GOOGLE_DRIVE_FAILED
     const isPastDownload = [
         JobStatus.PENDING_UPLOAD,
         JobStatus.UPLOADING,
@@ -24,11 +26,15 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
     ].includes(status)
     const isCompleted = status === JobStatus.COMPLETED
 
-    const downloadPct = isCompleted || isPastDownload ? 100 : isDownloading ? job.progressPercentage : 0
-    const uploadPct = isCompleted ? 100 : isUploading ? job.progressPercentage : 0
+    // Sanitize progressPercentage to guard against NaN / undefined at runtime
+    const rawPct = Number(job.progressPercentage)
+    const safePct = Number.isFinite(rawPct) ? rawPct : 0
+
+    const downloadPct = isCompleted || isPastDownload ? 100 : isDownloading ? safePct : 0
+    const uploadPct = isCompleted ? 100 : isUploading ? safePct : 0
 
     const downloadLabel = downloadPct === 100 ? 'Completed' : isDownloading ? 'In Progress' : 'Pending'
-    const uploadLabel = uploadPct === 100 ? 'Completed' : isUploading ? 'Uploading' : 'Pending'
+    const uploadLabel = uploadPct === 100 ? 'Completed' : isUploadFailed ? 'Upload Failed' : isUploading ? 'Uploading' : 'Pending'
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,7 +94,7 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
                         </div>
                         <p className={cn(
                             'text-sm font-medium font-mono',
-                            uploadPct === 100 ? 'text-primary' : isUploading ? 'text-info-medium' : 'text-muted-foreground'
+                            uploadPct === 100 ? 'text-primary' : isUploadFailed ? 'text-danger' : isUploading ? 'text-info-medium' : 'text-muted-foreground'
                         )}>
                             {uploadLabel}
                         </p>
@@ -111,7 +117,7 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
 
                     <div className="flex justify-between items-center text-xs text-muted-foreground font-mono">
                         <span>
-                            {formatFileSize(isUploading ? job.bytesDownloaded : 0)} / {formatFileSize(job.totalBytes)}
+                            {formatFileSize(isUploading ? job.bytesDownloaded : job.totalBytes)} / {formatFileSize(job.totalBytes)}
                         </span>
                     </div>
                 </div>

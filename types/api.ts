@@ -1,9 +1,13 @@
 // API Response Types - Complete DTOs matching backend
 import {
-  StorageProviderType,
   JobStatus,
   JobType,
 } from './enums'
+
+// Re-export canonical Zod-inferred types so existing imports from '@/types/api'
+// continue to resolve while the authoritative definition lives in the domain module.
+export type { TorrentAnalysisResponse } from './torrents'
+export type { StorageProfile, OAuthCredential, GoogleDriveAuthResponse } from './storage'
 
 // ============================================
 // User Models
@@ -53,43 +57,6 @@ export interface TorrentHealthMeasurements {
   isWeak: boolean
   isHealthy: boolean
   healthScore: number
-}
-
-export interface TorrentAnalysisResponse {
-  torrentFileId: number
-  fileName: string
-  infoHash: string
-  totalSizeInBytes: number
-  files: TorrentFile[]
-  torrentHealth: TorrentHealthMeasurements
-}
-
-// ============================================
-// Storage Profile Models
-// ============================================
-
-export interface StorageProfile {
-  id: number
-  profileName: string
-  providerType: StorageProviderType
-  email: string | null
-  isDefault: boolean
-  isActive: boolean
-  needsReauth: boolean
-  isConfigured: boolean
-  createdAt: string
-}
-
-export interface GoogleDriveAuthResponse {
-  authorizationUrl: string
-}
-
-export interface OAuthCredential {
-  id: number
-  name: string
-  clientIdMasked: string
-  redirectUri: string
-  createdAt: string
 }
 
 // ============================================

@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { formatFileSize } from '@/lib/utils/formatters'
 import type { Job } from '@/types/jobs'
 import { getJobStatusConfig } from './JobStatusConfig'
@@ -9,7 +10,7 @@ interface JobDetailsCardProps {
     job: Job
 }
 
-function MetaField({ label, value }: { label: string; value: React.ReactNode }) {
+function MetaField({ label, value }: { label: string; value: ReactNode }) {
     return (
         <div>
             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">

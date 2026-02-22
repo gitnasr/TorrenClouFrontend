@@ -38,18 +38,27 @@ export const jobsKeys = {
 /**
  * Hook to fetch paginated jobs list
  * Enhanced with refetch on focus, reconnect, and polling for active jobs
+ *
+ * @param params - Optional overrides for pageSize and status; when provided they
+ *   take precedence over the Zustand store values so callers like DashboardPage
+ *   can fetch with their own params without mutating shared store state.
  */
-export function useJobs() {
+export function useJobs(params?: Pick<JobsQueryParams, 'pageSize' | 'status'>) {
     const { status } = useSession()
-    const { currentPage, pageSize, selectedStatus } = useJobsStore()
+    const { currentPage, pageSize: storePageSize, selectedStatus } = useJobsStore()
+
+    // Explicit overrides win over store values; use 'in' check so null is honoured.
+    const pageSize = params?.pageSize ?? storePageSize
+    const effectiveStatus =
+        params !== undefined && 'status' in params ? (params.status ?? null) : selectedStatus
 
     return useQuery({
-        queryKey: jobsKeys.list({ pageNumber: currentPage, pageSize, status: selectedStatus }),
+        queryKey: jobsKeys.list({ pageNumber: currentPage, pageSize, status: effectiveStatus }),
         queryFn: async () => {
             const data = await getJobs({
                 pageNumber: currentPage,
                 pageSize,
-                status: selectedStatus,
+                status: effectiveStatus,
             })
             // Validate with Zod
             return paginatedJobsSchema.parse(data)

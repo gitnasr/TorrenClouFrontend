@@ -27,8 +27,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      await signOut({ redirect: false })
-      window.location.href = '/login'
+      try {
+        await signOut({ redirect: false })
+      } finally {
+        // Always redirect to login even if signOut rejects.
+        // Guard against SSR environments where window is absent.
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login'
+        }
+      }
     }
     return Promise.reject(error)
   }

@@ -202,7 +202,12 @@ export function openGoogleDriveAuthPopup(authorizationUrl: string): Promise<numb
                     popup.close()
 
                     if (success === 'true' && profileId) {
-                        resolve(parseInt(profileId, 10))
+                        const id = parseInt(profileId, 10)
+                        if (Number.isInteger(id) && id > 0) {
+                            resolve(id)
+                        } else {
+                            reject(new Error(`Invalid profile ID returned from OAuth callback: "${profileId}"`))
+                        }
                     } else if (error) {
                         reject(new Error(error))
                     } else if (message) {

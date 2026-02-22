@@ -143,6 +143,8 @@ export default function TorrentAnalyzePage() {
                                 </span>
                                 <button
                                     onClick={handleCopyHash}
+                                    aria-label={copied ? 'Hash copied' : 'Copy hash'}
+                                    aria-pressed={copied}
                                     className="text-muted-foreground hover:text-primary transition-colors"
                                 >
                                     {copied

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
@@ -15,21 +16,24 @@ import {
     selectConnectionError,
 } from '@/stores/storageProfilesStore'
 
-// Common S3-compatible endpoint presets
+// Common S3-compatible endpoint presets.
+// Cloudflare R2 uses a sentinel key ('__r2__') because the endpoint is account-specific
+// and must be entered manually — auto-filling a placeholder passes validation but fails
+// at runtime. When this preset is selected, the endpoint field is intentionally left empty.
 const S3_PRESETS = [
-    { label: 'Custom Endpoint', value: '' },
-    { label: 'AWS S3 (us-east-1)', value: 'https://s3.us-east-1.amazonaws.com', region: 'us-east-1' },
-    { label: 'AWS S3 (us-west-2)', value: 'https://s3.us-west-2.amazonaws.com', region: 'us-west-2' },
-    { label: 'AWS S3 (eu-west-1)', value: 'https://s3.eu-west-1.amazonaws.com', region: 'eu-west-1' },
-    { label: 'AWS S3 (ap-southeast-1)', value: 'https://s3.ap-southeast-1.amazonaws.com', region: 'ap-southeast-1' },
-    { label: 'Backblaze B2 (US West)', value: 'https://s3.us-west-000.backblazeb2.com', region: 'us-west-000' },
-    { label: 'Backblaze B2 (US East)', value: 'https://s3.us-east-005.backblazeb2.com', region: 'us-east-005' },
-    { label: 'Backblaze B2 (EU Central)', value: 'https://s3.eu-central-003.backblazeb2.com', region: 'eu-central-003' },
-    { label: 'Cloudflare R2', value: 'https://<account_id>.r2.cloudflarestorage.com', region: 'auto' },
-    { label: 'DigitalOcean Spaces (NYC3)', value: 'https://nyc3.digitaloceanspaces.com', region: 'nyc3' },
-    { label: 'DigitalOcean Spaces (AMS3)', value: 'https://ams3.digitaloceanspaces.com', region: 'ams3' },
-    { label: 'Wasabi (US East 1)', value: 'https://s3.wasabisys.com', region: 'us-east-1' },
-    { label: 'MinIO (Local)', value: 'http://localhost:9000', region: 'us-east-1' },
+    { key: '', label: 'Custom Endpoint', value: '' },
+    { key: 'aws-us-east-1', label: 'AWS S3 (us-east-1)', value: 'https://s3.us-east-1.amazonaws.com', region: 'us-east-1' },
+    { key: 'aws-us-west-2', label: 'AWS S3 (us-west-2)', value: 'https://s3.us-west-2.amazonaws.com', region: 'us-west-2' },
+    { key: 'aws-eu-west-1', label: 'AWS S3 (eu-west-1)', value: 'https://s3.eu-west-1.amazonaws.com', region: 'eu-west-1' },
+    { key: 'aws-ap-southeast-1', label: 'AWS S3 (ap-southeast-1)', value: 'https://s3.ap-southeast-1.amazonaws.com', region: 'ap-southeast-1' },
+    { key: 'b2-us-west', label: 'Backblaze B2 (US West)', value: 'https://s3.us-west-000.backblazeb2.com', region: 'us-west-000' },
+    { key: 'b2-us-east', label: 'Backblaze B2 (US East)', value: 'https://s3.us-east-005.backblazeb2.com', region: 'us-east-005' },
+    { key: 'b2-eu-central', label: 'Backblaze B2 (EU Central)', value: 'https://s3.eu-central-003.backblazeb2.com', region: 'eu-central-003' },
+    { key: '__r2__', label: 'Cloudflare R2', value: '', region: 'auto' },
+    { key: 'do-nyc3', label: 'DigitalOcean Spaces (NYC3)', value: 'https://nyc3.digitaloceanspaces.com', region: 'nyc3' },
+    { key: 'do-ams3', label: 'DigitalOcean Spaces (AMS3)', value: 'https://ams3.digitaloceanspaces.com', region: 'ams3' },
+    { key: 'wasabi', label: 'Wasabi (US East 1)', value: 'https://s3.wasabisys.com', region: 'us-east-1' },
+    { key: 'minio', label: 'MinIO (Local)', value: 'http://localhost:9000', region: 'us-east-1' },
 ]
 
 interface S3ConfigFormProps {
@@ -60,14 +64,19 @@ export function S3ConfigForm({ onSuccess }: S3ConfigFormProps) {
     })
 
     const setAsDefault = watch('setAsDefault')
+    const [selectedPresetKey, setSelectedPresetKey] = useState<string>('')
 
-    const handlePresetChange = (presetValue: string) => {
-        const preset = S3_PRESETS.find(p => p.value === presetValue)
+    const handlePresetChange = (presetKey: string) => {
+        setSelectedPresetKey(presetKey)
+        const preset = S3_PRESETS.find(p => p.key === presetKey)
         if (preset && preset.value) {
+            // Known endpoint — fill in the URL and region
             setValue('s3Endpoint', preset.value)
-            if (preset.region) {
-                setValue('s3Region', preset.region)
-            }
+            setValue('s3Region', preset.region || '')
+        } else {
+            // Custom Endpoint or Cloudflare R2 — clear so user must enter real values
+            setValue('s3Endpoint', '')
+            setValue('s3Region', preset?.region || '')
         }
     }
 
@@ -119,7 +128,7 @@ export function S3ConfigForm({ onSuccess }: S3ConfigFormProps) {
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {S3_PRESETS.map((preset) => (
-                        <option key={preset.value || 'custom'} value={preset.value}>
+                        <option key={preset.key || 'custom'} value={preset.key}>
                             {preset.label}
                         </option>
                     ))}
@@ -140,6 +149,12 @@ export function S3ConfigForm({ onSuccess }: S3ConfigFormProps) {
                     placeholder="https://s3.us-east-1.amazonaws.com"
                     disabled={configureS3.isPending}
                 />
+                {selectedPresetKey === '__r2__' && (
+                    <p className="mt-1 text-xs text-info">
+                        Enter your Cloudflare R2 endpoint:{' '}
+                        <span className="font-mono">https://&lt;account_id&gt;.r2.cloudflarestorage.com</span>
+                    </p>
+                )}
                 {errors.s3Endpoint && (
                     <p className="mt-1 text-sm text-danger">{errors.s3Endpoint.message}</p>
                 )}

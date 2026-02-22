@@ -19,6 +19,10 @@ interface StorageProfilesUIState {
     setConnecting: (isConnecting: boolean) => void
     setConnectionError: (error: string | null) => void
 
+    // Credential-save error (separate so it only appears in OAuthCredentialsForm)
+    credentialSaveError: string | null
+    setCredentialSaveError: (error: string | null) => void
+
     // Credential selection for connect flow
     selectedCredentialId: number | null
     setSelectedCredentialId: (id: number | null) => void
@@ -59,6 +63,10 @@ export const useStorageProfilesStore = create<StorageProfilesUIState>()(
             setConnecting: (isConnecting) => set({ isConnecting, connectionError: null }),
             setConnectionError: (error) => set({ connectionError: error, isConnecting: false }),
 
+            // Credential-save error
+            credentialSaveError: null,
+            setCredentialSaveError: (error) => set({ credentialSaveError: error }),
+
             // Credential selection
             selectedCredentialId: null,
             setSelectedCredentialId: (id: number | null) => set({ selectedCredentialId: id }),
@@ -77,6 +85,7 @@ export const useStorageProfilesStore = create<StorageProfilesUIState>()(
                 profileName: '',
                 isConnecting: false,
                 connectionError: null,
+                credentialSaveError: null,
                 selectedCredentialId: null,
                 isCredentialsFormOpen: false,
                 selectedProfileId: null,
@@ -91,6 +100,7 @@ export const selectIsConnectModalOpen = (state: StorageProfilesUIState) => state
 export const selectProfileName = (state: StorageProfilesUIState) => state.profileName
 export const selectIsConnecting = (state: StorageProfilesUIState) => state.isConnecting
 export const selectConnectionError = (state: StorageProfilesUIState) => state.connectionError
+export const selectCredentialSaveError = (state: StorageProfilesUIState) => state.credentialSaveError
 export const selectSelectedCredentialId = (state: StorageProfilesUIState) => state.selectedCredentialId
 export const selectIsCredentialsFormOpen = (state: StorageProfilesUIState) => state.isCredentialsFormOpen
 export const selectSelectedProfileId = (state: StorageProfilesUIState) => state.selectedProfileId

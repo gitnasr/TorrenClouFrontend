@@ -26,9 +26,16 @@ export function Topbar() {
     <div className="flex h-16 items-center justify-end border-b border-border bg-card px-6">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="flex items-center gap-2 px-2 h-10 rounded-lg">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 px-2 h-10 rounded-lg"
+            aria-label={session?.user?.name || session?.user?.email || 'User profile'}
+          >
             <Avatar className="h-8 w-8">
-              <AvatarImage src={session?.user?.image || undefined} />
+              <AvatarImage
+                src={undefined}
+                alt={session?.user?.name || session?.user?.email || 'User avatar'}
+              />
               <AvatarFallback className="bg-primary/20 text-primary text-xs font-semibold">
                 {userInitials}
               </AvatarFallback>
