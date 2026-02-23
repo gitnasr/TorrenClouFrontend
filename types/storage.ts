@@ -74,7 +74,7 @@ export const OAuthCredentialsArraySchema = z.array(OAuthCredentialSchema)
 
 // Connect a Google Drive account using a saved credential
 export const ConnectGoogleDriveRequestSchema = z.object({
-    credentialId: z.number({ required_error: 'Please select a credential' }),
+    credentialId: z.number({ error: 'Please select a credential' }),
     profileName: z.string()
         .max(255, 'Profile name must be at most 255 characters')
         .optional(),
