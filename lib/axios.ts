@@ -2,7 +2,7 @@ import axios from 'axios'
 import { getSession, signOut } from 'next-auth/react'
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:47200/api',
   headers: {
     'Content-Type': 'application/json',
   },

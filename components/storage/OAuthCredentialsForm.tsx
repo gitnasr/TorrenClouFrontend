@@ -37,7 +37,7 @@ export function OAuthCredentialsForm({ className }: OAuthCredentialsFormProps) {
     const { setCredentialsFormOpen, setCredentialSaveError } = useStorageProfilesStore()
 
     // Auto-generate redirect URI based on backend URL
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:47200'
     const defaultRedirectUri = `${backendUrl}/api/storage/gdrive/callback`
 
     const {

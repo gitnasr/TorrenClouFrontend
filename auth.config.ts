@@ -32,7 +32,7 @@ export const authConfig = {
               ? new https.Agent({ rejectUnauthorized: false })
               : new https.Agent()
 
-          const baseUrl = process.env.BACKEND_URL || 'http://localhost:5000'
+          const baseUrl = process.env.BACKEND_URL || 'http://localhost:47200'
           const response = await axios.post<BackendAuthResponse>(
             `${baseUrl}/api/auth/login`,
             { email, password },

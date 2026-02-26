@@ -1,9 +1,9 @@
 // Health API — public endpoints, no auth required
 // Base URL reuses NEXT_PUBLIC_API_URL so it's always consistent with the rest of the app.
-// e.g. NEXT_PUBLIC_API_URL = 'http://localhost:5000/api'
-// → /health/ready resolves to 'http://localhost:5000/api/health/ready'
+// e.g. NEXT_PUBLIC_API_URL = 'http://localhost:47200/api'
+// → /health/ready resolves to 'http://localhost:47200/api/health/ready'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:47200/api'
 
 export type HealthStatus = 'operational' | 'degraded' | 'down' | 'loading'
 export type ServiceStatus = 'healthy' | 'unhealthy' | 'timeout'

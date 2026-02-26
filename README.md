@@ -78,17 +78,17 @@ yarn install
 yarn dev
 ```
 
-Opens at `http://localhost:3000`. The backend API should be running at `http://localhost:5000`.
+Opens at `http://localhost:47100`. The backend API should be running at `http://localhost:47200`.
 
 ## Environment Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `NEXT_PUBLIC_API_URL` | Build-time | `http://localhost:5000/api` | API base URL (used by browser) |
-| `NEXT_PUBLIC_BACKEND_URL` | Build-time | `http://localhost:5000` | Backend root URL (Google Drive OAuth callbacks) |
-| `BACKEND_URL` | Runtime | `http://localhost:5000` | Server-side API URL (SSR auth calls) |
+| `NEXT_PUBLIC_API_URL` | Build-time | `http://localhost:47200/api` | API base URL (used by browser) |
+| `NEXT_PUBLIC_BACKEND_URL` | Build-time | `http://localhost:47200` | Backend root URL (Google Drive OAuth callbacks) |
+| `BACKEND_URL` | Runtime | `http://localhost:47200` | Server-side API URL (SSR auth calls) |
 | `NEXTAUTH_SECRET` | Runtime | - | NextAuth encryption secret |
-| `NEXTAUTH_URL` | Runtime | `http://localhost:3000` | NextAuth canonical URL |
+| `NEXTAUTH_URL` | Runtime | `http://localhost:47100` | NextAuth canonical URL |
 
 > **Note:** `NEXT_PUBLIC_*` variables are baked into the JavaScript bundle at build time and cannot be changed at runtime.
 
