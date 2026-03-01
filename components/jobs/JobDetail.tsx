@@ -212,26 +212,32 @@ export function JobDetail() {
 
             <CardContent className="space-y-6">
                 {/* Progress Section */}
-                {isActive && job.totalBytes > 0 && (
-                    <div className="space-y-3 p-4 bg-surface-100 rounded-xl">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Progress</span>
-                            <span className="text-sm font-bold text-primary">
-                                {job.progressPercentage.toFixed(1)}%
-                            </span>
+                {isActive && job.totalBytes > 0 && (() => {
+                    const isUploadPhase = [JobStatus.UPLOADING, JobStatus.UPLOAD_RETRY, JobStatus.PENDING_UPLOAD].includes(job.status as JobStatus)
+                    const pct = isUploadPhase ? job.uploadProgressPercentage : job.progressPercentage
+                    const bytes = isUploadPhase ? job.bytesUploaded : job.bytesDownloaded
+                    const label = isUploadPhase ? 'Upload Progress' : 'Download Progress'
+                    return (
+                        <div className="space-y-3 p-4 bg-surface-100 rounded-xl">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">{label}</span>
+                                <span className="text-sm font-bold text-primary">
+                                    {pct.toFixed(1)}%
+                                </span>
+                            </div>
+                            <Progress value={pct} className="h-3" />
+                            <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>{formatFileSize(bytes)} / {formatFileSize(job.totalBytes)}</span>
+                                <span>{formatFileSize(job.totalBytes - bytes)} remaining</span>
+                            </div>
+                            {job.currentState && (
+                                <p className="text-sm text-muted-foreground italic">
+                                    {job.currentState}
+                                </p>
+                            )}
                         </div>
-                        <Progress value={job.progressPercentage} className="h-3" />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{formatFileSize(job.bytesDownloaded)} / {formatFileSize(job.totalBytes)}</span>
-                            <span>{formatFileSize(job.totalBytes - job.bytesDownloaded)} remaining</span>
-                        </div>
-                        {job.currentState && (
-                            <p className="text-sm text-muted-foreground italic">
-                                {job.currentState}
-                            </p>
-                        )}
-                    </div>
-                )}
+                    )
+                })()}
 
                 {/* Error Message */}
                 {job.errorMessage && (

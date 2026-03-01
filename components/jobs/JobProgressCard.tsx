@@ -27,11 +27,13 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
     const isCompleted = status === JobStatus.COMPLETED
 
     // Sanitize progressPercentage to guard against NaN / undefined at runtime
-    const rawPct = Number(job.progressPercentage)
-    const safePct = Number.isFinite(rawPct) ? rawPct : 0
+    const rawDownloadPct = Number(job.progressPercentage)
+    const safeDownloadPct = Number.isFinite(rawDownloadPct) ? rawDownloadPct : 0
+    const rawUploadPct = Number(job.uploadProgressPercentage)
+    const safeUploadPct = Number.isFinite(rawUploadPct) ? rawUploadPct : 0
 
-    const downloadPct = isCompleted || isPastDownload ? 100 : isDownloading ? safePct : 0
-    const uploadPct = isCompleted ? 100 : isUploading ? safePct : 0
+    const downloadPct = isCompleted || isPastDownload ? 100 : isDownloading ? safeDownloadPct : 0
+    const uploadPct = isCompleted ? 100 : isUploading ? safeUploadPct : 0
 
     const downloadLabel = downloadPct === 100 ? 'Completed' : isDownloading ? 'In Progress' : 'Pending'
     const uploadLabel = uploadPct === 100 ? 'Completed' : isUploadFailed ? 'Upload Failed' : isUploading ? 'Uploading' : 'Pending'
@@ -117,7 +119,7 @@ export function JobProgressCard({ job }: JobProgressCardProps) {
 
                     <div className="flex justify-between items-center text-xs text-muted-foreground font-mono">
                         <span>
-                            {formatFileSize(isUploading ? job.bytesDownloaded : job.totalBytes)} / {formatFileSize(job.totalBytes)}
+                            {formatFileSize(isCompleted ? job.totalBytes : job.bytesUploaded)} / {formatFileSize(job.totalBytes)}
                         </span>
                     </div>
                 </div>

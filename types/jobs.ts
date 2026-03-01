@@ -69,6 +69,7 @@ export const jobSchema = z.object({
     errorMessage: z.string().nullable(),
     currentState: z.string().nullable(),
     bytesDownloaded: z.number().int().nonnegative(),
+    bytesUploaded: z.number().int().nonnegative().default(0),
     totalBytes: z.number().int().nonnegative(),
     selectedFilePaths: z.array(z.string()).nullable(),
     createdAt: z.string().datetime(),
@@ -76,6 +77,7 @@ export const jobSchema = z.object({
     startedAt: z.string().datetime().nullable().optional(),
     completedAt: z.string().datetime().nullable().optional(),
     progressPercentage: z.number().transform((val) => Math.min(100, Math.max(0, val))),
+    uploadProgressPercentage: z.number().transform((val) => Math.min(100, Math.max(0, val))).default(0),
     isActive: z.boolean(),
     // Action state properties
     canRetry: z.boolean().optional().default(false),
